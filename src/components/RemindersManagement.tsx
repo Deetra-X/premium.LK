@@ -19,7 +19,7 @@ import {
   Phone,
   FileText
 } from 'lucide-react';
-import { Account, Sale } from '../types';
+import { Account, Sale } from '../types/index';
 import { fetchExpiringAccounts } from '../api/Dashboard';
 import { getSalesData } from '../data/salesData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
@@ -46,6 +46,37 @@ interface SalesRenewal {
   status: 'pending' | 'contacted' | 'confirmed' | 'completed' | 'declined';
   urgencyLevel: 'critical' | 'warning' | 'normal';
   sale: Sale;
+}
+
+interface RawAccountData {
+  id: string;
+  renewal_date?: string;
+  renewalDate?: string;
+  cost?: number;
+  price?: number;
+  subscription_type?: string;
+  product_name?: string;
+  productName?: string;
+  label?: string;
+  email?: string;
+  renewal_status?: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  is_active?: boolean | number;
+  service_type?: string;
+  category_id?: string;
+  brand?: string;
+  max_user_slots?: number;
+  available_slots?: number;
+  current_users?: number;
+  cost_per_additional_user?: number;
+  is_shared_account?: boolean;
+  family_features?: string;
+  usage_restrictions?: string;
+  primary_holder_name?: string;
+  primary_holder_email?: string;
+  primary_holder_phone?: string;
 }
 
 type Renewal = AccountRenewal | SalesRenewal;
@@ -214,7 +245,7 @@ const RenewalDetailsModal: React.FC<RenewalDetailsModalProps> = ({
                 <div className="bg-slate-700 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-white mb-4">Family/Shared Features</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {renewal.account.familyFeatures.map((feature, index) => (
+                    {renewal.account.familyFeatures.map((feature: string, index: number) => (
                       <div key={index} className="flex items-center gap-2 p-2 bg-green-500/10 rounded">
                         <CheckCircle size={16} className="text-green-400" />
                         <span className="text-green-300 text-sm">{feature}</span>
@@ -229,7 +260,7 @@ const RenewalDetailsModal: React.FC<RenewalDetailsModalProps> = ({
                 <div className="bg-slate-700 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-white mb-4">Usage Restrictions</h3>
                   <div className="space-y-2">
-                    {renewal.account.usageRestrictions.map((restriction, index) => (
+                    {renewal.account.usageRestrictions.map((restriction: string, index: number) => (
                       <div key={index} className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded">
                         <AlertTriangle size={16} className="text-yellow-400" />
                         <span className="text-yellow-300 text-sm">{restriction}</span>
@@ -329,7 +360,7 @@ const RenewalDetailsModal: React.FC<RenewalDetailsModalProps> = ({
               <div className="bg-slate-700 rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-white mb-4">Original Order Items</h3>
                 <div className="space-y-2">
-                  {(renewal.sale.items || []).map((item, index) => (
+                  {(renewal.sale.items || []).map((item: { productId: string; productName: string; price: number; quantity: number; }, index: number) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-slate-600 rounded">
                       <div>
                         <p className="text-white">{item.productName}</p>
@@ -400,58 +431,76 @@ export const RemindersManagement: React.FC = () => {
 
   const generateAccountRenewals = async () => {
     try {
-      const accounts = await fetchExpiringAccounts(7); // Get accounts expiring in next 3 days
+      const accounts = await fetchExpiringAccounts(3); // Get accounts expiring in next 3 days
       const now = new Date();
 
+      console.log('🔍 Processing accounts for renewals (3 days):', accounts.length);
+
     const renewals: AccountRenewal[] = accounts
-      .map(account => {
-        const renewalDate = new Date(account.renewal_date);
+      .map((account: RawAccountData) => {
+        // Safe access with fallbacks
+        const renewalDateStr = account.renewal_date || account.renewalDate;
+        if (!renewalDateStr) return null;
+        
+        const renewalDate = new Date(renewalDateStr);
         const daysRemaining = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const cost = account.cost || account.price || 0;
         const weeklyCost = account.subscription_type === 'monthly' 
-          ? account.cost / 4.33 // Approximate weeks in a month
-          : account.cost / 52; // Weeks in a year
+          ? cost / 4.33 // Approximate weeks in a month
+          : cost / 52; // Weeks in a year
 
         let urgencyLevel: 'critical' | 'warning' | 'normal' = 'normal';
         if (daysRemaining <= 0) urgencyLevel = 'critical';
         else if (daysRemaining <= 1) urgencyLevel = 'warning';
 
-        // Convert database fields to Account interface format
-        const accountData: Account = {
-          id: account.id,
-          productName: account.product_name,
-          label: account.label || '',
-          email: account.email || '',
-          renewalStatus: account.renewal_status as Account['renewalStatus'],
-          daysUntilRenewal: daysRemaining,
-          cost: account.cost,
-          description: account.description || '',
-          createdAt: new Date(account.created_at),
-          updatedAt: new Date(account.updated_at),
-          isActive: account.is_active,
-          serviceType: account.service_type as Account['serviceType'],
-          subscriptionType: account.subscription_type as Account['subscriptionType'],
-          renewalDate: renewalDate,
-          categoryId: account.category_id,
-          brand: account.brand,
-          maxUserSlots: account.max_user_slots,
-          availableSlots: account.available_slots,
-          currentUsers: account.current_users,
-          costPerAdditionalUser: account.cost_per_additional_user,
-          isSharedAccount: account.is_shared_account,
-          familyFeatures: account.family_features ? JSON.parse(account.family_features) : [],
-          usageRestrictions: account.usage_restrictions ? JSON.parse(account.usage_restrictions) : [],
+        console.log('📅 Account renewal:', {
+          product: account.product_name,
+          renewalDate: renewalDateStr,
+          daysRemaining,
+          urgencyLevel
+        });
+
+        // Only include renewals due within 3 days
+        if (daysRemaining <= 3) {
+          // Convert database fields to Account interface format with safe fallbacks
+          const accountData: Account = {
+            id: account.id || '',
+            productName: account.product_name || account.productName || 'Unknown Product',
+            label: account.label || '',
+            email: account.email || '',
+            renewalStatus: (account.renewal_status as Account['renewalStatus']) || 'renewable',
+            daysUntilRenewal: daysRemaining,
+            cost: cost,
+            description: account.description || '',
+            createdAt: account.created_at ? new Date(account.created_at) : new Date(),
+            updatedAt: account.updated_at ? new Date(account.updated_at) : new Date(),
+            isActive: Boolean(account.is_active),
+            serviceType: (account.service_type as Account['serviceType']) || 'other',
+            subscriptionType: (account.subscription_type as Account['subscriptionType']) || 'monthly',
+            renewalDate: renewalDate,
+            categoryId: account.category_id || undefined,
+          brand: account.brand || undefined,
+          maxUserSlots: Number(account.max_user_slots) || 1,
+          availableSlots: Number(account.available_slots) || 0,
+          currentUsers: Number(account.current_users) || 0,
+          costPerAdditionalUser: account.cost_per_additional_user ? Number(account.cost_per_additional_user) : undefined,
+          isSharedAccount: Boolean(account.is_shared_account),
+          familyFeatures: account.family_features && typeof account.family_features === 'string' 
+            ? JSON.parse(account.family_features) : [],
+          usageRestrictions: account.usage_restrictions && typeof account.usage_restrictions === 'string'
+            ? JSON.parse(account.usage_restrictions) : [],
           primaryHolder: {
             name: account.primary_holder_name || '',
             email: account.primary_holder_email || '',
-            phone: account.primary_holder_phone || ''
+            phone: account.primary_holder_phone || undefined
           },
           userSlots: []
         };
 
         return {
-          id: account.id,
+          id: account.id || '',
           type: 'account' as const,
-          accountName: account.product_name,
+          accountName: account.product_name || account.productName || 'Unknown Product',
           renewalDate: renewalDate,
           weeklyCost,
           daysRemaining: Math.max(0, daysRemaining),
@@ -459,59 +508,82 @@ export const RemindersManagement: React.FC = () => {
           isCompleted: false,
           account: accountData
         };
+        }
+        return null; // Return null if not due within 3 days
       })
-      .sort((a, b) => a.daysRemaining - b.daysRemaining);
+      .filter((renewal: AccountRenewal | null): renewal is AccountRenewal => renewal !== null)
+      .sort((a: AccountRenewal, b: AccountRenewal) => a.daysRemaining - b.daysRemaining);
 
+    console.log('🔔 Generated account renewals (3 days):', renewals.length);
     setAccountRenewals(renewals);
     } catch (error) {
       console.error('Error generating account renewals:', error);
+      setAccountRenewals([]); // Set empty array on error
     }
   };
 
   const generateSalesRenewals = async () => {
-    const { sales } = await getSalesData();
-    const now = new Date();
+    try {
+      const { sales } = await getSalesData();
+      const now = new Date();
 
-const renewals: SalesRenewal[] = sales
-  .filter(sale => sale.status === 'completed')
-  .map(sale => {
-    // Calculate renewal date (assuming 1 year renewal cycle)
-    const renewalDate = new Date(sale.order_date);
-    renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      console.log('🔍 Processing sales for renewals:', sales.length);
 
-    const daysUntilRenewal = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const renewals: SalesRenewal[] = sales
+        .filter(sale => sale.status === 'completed')
+        .map(sale => {
+          // Since the database doesn't have end_date or days_until_renewal fields,
+          // we'll calculate renewal date based on order_date + 1 year
+          const orderDate = new Date(sale.order_date);
+          const renewalDate = new Date(orderDate);
+          renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+          
+          const daysUntilRenewal = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    let urgencyLevel: 'critical' | 'warning' | 'normal' = 'normal';
-    if (daysUntilRenewal <= 0) urgencyLevel = 'critical';
-    else if (daysUntilRenewal <= 7) urgencyLevel = 'warning';
+          let urgencyLevel: 'critical' | 'warning' | 'normal' = 'normal';
+          if (daysUntilRenewal <= 0) urgencyLevel = 'critical';
+          else if (daysUntilRenewal <= 30) urgencyLevel = 'warning';
+          else if (daysUntilRenewal <= 90) urgencyLevel = 'normal';
 
-    // Only include renewals that are due within 30 days or overdue
-    if (daysUntilRenewal <= 30) {
-      return {
-        id: sale.id,
-        type: 'sales',
-        customerName: sale.customer_name,
-        originalSaleDate: new Date(sale.order_date),
-        renewalDate,
-        saleAmount: sale.total_amount,
-        status: daysUntilRenewal <= 0 ? 'pending' : 'pending',
-        urgencyLevel,
-        sale: {
-          ...sale,
-          items: Array.isArray(sale.items) ? sale.items : JSON.parse(sale.items || '[]'),
-          orderDate: new Date(sale.order_date),
-          customerEmail: sale.customer_email,
-          customerPhone: sale.customer_phone,
-          // Add other fields as needed
-        }
-      };
+          console.log('📅 Sales renewal:', {
+            customer: sale.customer_name,
+            orderDate: sale.order_date,
+            renewalDate: renewalDate.toISOString(),
+            daysUntilRenewal,
+            urgencyLevel
+          });
+
+          // Only include renewals that are due within 365 days (1 year) or overdue
+          if (daysUntilRenewal <= 365) {
+            return {
+              id: sale.id,
+              type: 'sales' as const,
+              customerName: sale.customer_name,
+              originalSaleDate: new Date(sale.order_date),
+              renewalDate,
+              saleAmount: sale.total_amount,
+              status: daysUntilRenewal <= 0 ? 'pending' : 'pending',
+              urgencyLevel,
+              sale: {
+                ...sale,
+                items: Array.isArray(sale.items) ? sale.items : JSON.parse(sale.items || '[]'),
+                orderDate: new Date(sale.order_date),
+                customerEmail: sale.customer_email,
+                customerPhone: sale.customer_phone,
+              }
+            };
+          }
+          return null;
+        })
+        .filter((renewal): renewal is SalesRenewal => renewal !== null)
+        .sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
+
+      console.log('🔔 Generated sales renewals:', renewals.length);
+      setSalesRenewals(renewals);
+    } catch (error) {
+      console.error('Error generating sales renewals:', error);
+      setSalesRenewals([]);
     }
-    return null;
-  })
-  .filter((renewal): renewal is SalesRenewal => renewal !== null)
-  .sort((a, b) => a.renewalDate.getTime() - b.renewalDate.getTime());
-
-setSalesRenewals(renewals);
   };
 
   const getUrgencyColor = (urgency: 'critical' | 'warning' | 'normal') => {
@@ -634,7 +706,7 @@ setSalesRenewals(renewals);
               <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <select
                 value={filterUrgency}
-                onChange={(e) => setFilterUrgency(e.target.value as any)}
+                onChange={(e) => setFilterUrgency(e.target.value as 'all' | 'critical' | 'warning' | 'normal')}
                 className="pl-10 pr-8 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
               >
                 <option value="all">All Urgency</option>
