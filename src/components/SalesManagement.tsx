@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
@@ -442,9 +442,14 @@ export const SalesManagement: React.FC = () => {
     loadData();
   }, []);
 
+  // Reload data when filters change
+  useEffect(() => {
+    loadData();
+  }, [filterStatus, searchTerm, sortBy, sortOrder]);
+
   const [apiStatus, setApiStatus] = useState<{isConnected: boolean; message?: string}>({ isConnected: false });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Loading sales data...');
@@ -470,7 +475,7 @@ export const SalesManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus, searchTerm, sortBy, sortOrder]);
 
   const retryApiConnection = async () => {
     await loadData();
@@ -489,11 +494,12 @@ export const SalesManagement: React.FC = () => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(sale => 
-        (sale.orderNumber || '').toLowerCase().includes(searchLower) ||
-        (sale.customerName || '').toLowerCase().includes(searchLower) ||
-        (sale.customerEmail || '').toLowerCase().includes(searchLower) ||
-        ((sale.items || []).some((item: {productName?: string}) => 
-          (item && item.productName) ? item.productName.toLowerCase().includes(searchLower) : false)
+        (sale.order_number || '').toLowerCase().includes(searchLower) ||
+        (sale.customer_name || '').toLowerCase().includes(searchLower) ||
+        (sale.customer_email || '').toLowerCase().includes(searchLower) ||
+        ((sale.items || []).some((item: {productName?: string, product_name?: string}) => 
+          (item && (item.productName || item.product_name)) ? 
+            (item.productName || item.product_name)!.toLowerCase().includes(searchLower) : false)
         )
       );
     }
@@ -517,7 +523,7 @@ export const SalesManagement: React.FC = () => {
           startDate = new Date(0);
       }
 
-      filtered = filtered.filter(sale => new Date(sale.orderDate) >= startDate);
+      filtered = filtered.filter(sale => new Date(sale.order_date) >= startDate);
     }
 
     // Apply sorting
@@ -526,24 +532,24 @@ export const SalesManagement: React.FC = () => {
 
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.orderDate);
-          bValue = new Date(b.orderDate);
+          aValue = new Date(a.order_date);
+          bValue = new Date(b.order_date);
           break;
         case 'amount':
-          aValue = a.totalAmount;
-          bValue = b.totalAmount;
+          aValue = a.total_amount;
+          bValue = b.total_amount;
           break;
         case 'customer':
-          aValue = a.customerName.toLowerCase();
-          bValue = b.customerName.toLowerCase();
+          aValue = a.customer_name.toLowerCase();
+          bValue = b.customer_name.toLowerCase();
           break;
         case 'orderNumber':
           aValue = a.order_number;
           bValue = b.order_number;
           break;
         default:
-          aValue = new Date(a.createdAt || a.orderDate);
-          bValue = new Date(b.createdAt || b.orderDate);
+          aValue = new Date(a.created_at || a.order_date);
+          bValue = new Date(b.created_at || b.order_date);
       }
 
       if (sortOrder === 'desc') {
@@ -698,6 +704,7 @@ export const SalesManagement: React.FC = () => {
   };
 
   const handleReorder = (sale: Sale) => {
+    // This would typically open the create order modal with the sale data pre-filled
     setShowCreateOrder(true);
   };
 
@@ -828,7 +835,7 @@ export const SalesManagement: React.FC = () => {
                 <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <select
                   value={filterPeriod}
-                  onChange={(e) => setFilterPeriod(e.target.value as any)}
+                  onChange={(e) => setFilterPeriod(e.target.value as 'all' | 'today' | 'week' | 'month')}
                   className="pl-10 pr-8 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
                 >
                   <option value="all">All Time</option>
@@ -840,7 +847,7 @@ export const SalesManagement: React.FC = () => {
 
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => setFilterStatus(e.target.value as 'all' | 'completed' | 'pending' | 'cancelled')}
                 className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[120px]"
               >
                 <option value="all">All Status</option>
@@ -851,7 +858,7 @@ export const SalesManagement: React.FC = () => {
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'customer' | 'orderNumber')}
                 className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
               >
                 <option value="date">Sort by Date</option>
@@ -913,7 +920,7 @@ export const SalesManagement: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center gap-2">
                         <Calendar size={16} className="text-gray-400" />
-                        <span className="text-gray-300">{formatDate(sale.order_date)}</span>
+                        <span className="text-gray-300">{formatDate(new Date(sale.order_date))}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Package size={16} className="text-gray-400" />
@@ -955,7 +962,7 @@ export const SalesManagement: React.FC = () => {
                         <Edit size={18} />
                       </button>
                       <button
-                        onClick={() => handleReorder(sale.order_number)}
+                        onClick={() => handleReorder(sale)}
                         className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Reorder"
                       >
@@ -984,10 +991,10 @@ export const SalesManagement: React.FC = () => {
                   <div className="mt-4 pt-4 border-t border-slate-600">
                     <h4 className="text-sm font-medium text-gray-300 mb-3">Order Items:</h4>
                     <div className="space-y-2">
-                      {(sale.items || []).map((item: {productName?: string, price?: number, quantity?: number}, index: number) => (
+                      {(sale.items || []).map((item: {productName?: string, product_name?: string, price?: number, quantity?: number}, index: number) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-slate-600 rounded-lg">
                           <div>
-                            <p className="text-white font-medium">{item.productName || item.name || 'Unknown Product'}</p>
+                            <p className="text-white font-medium">{item.productName || item.product_name || 'Unknown Product'}</p>
                             <p className="text-gray-400 text-sm">
                               Quantity: {item.quantity || 1} × {formatCurrency(item.price || 0)}
                             </p>
