@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
+  Calendar, 
+  DollarSign, 
+  Clock, 
   CheckCircle, 
   AlertTriangle, 
+  XCircle,
   User,
   Package,
   Settings,
   Filter,
-  Search
+  Search,
+  RefreshCw,
+  Eye,
+  X,
+  Mail,
+  Phone,
+  FileText
 } from 'lucide-react';
 import { Account, Sale } from '../types/index';
 import { fetchExpiringAccounts } from '../api/Dashboard';
