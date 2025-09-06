@@ -122,6 +122,7 @@ const createSale = async (saleData: CreateSaleData): Promise<Sale> => {
       customer_type: saleData.customerType || 'standard', // Add customer type
       items: formattedItems,
       total_amount: saleData.totalAmount || 0,
+      discount_rate: saleData.discountRate || 0, // Include discount rate
       payment_method: saleData.paymentMethod || saleData.payment_method || 'cash',
       status: saleData.status || 'completed',
       notes: saleData.notes || '',
@@ -577,6 +578,7 @@ export const SalesManagement: React.FC = () => {
         customerType: orderData.customerType, // Add customer type
         items: formattedItems,
         totalAmount: orderData.totalAmount,
+        discountRate: orderData.discountRate, // Include discount rate
         paymentMethod: orderData.paymentMethod,
         status: 'completed',
         startDate: orderData.startDate,

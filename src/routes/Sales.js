@@ -351,6 +351,9 @@ router.post('/', async (req, res) => {
   try {
     console.log('POST /api/sales - Request received');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔍 Discount debugging:');
+    console.log('- req.body.discount_rate:', req.body.discount_rate);
+    console.log('- req.body.discountRate:', req.body.discountRate);
     
     // Extract data from request body
     const {
@@ -361,7 +364,8 @@ router.post('/', async (req, res) => {
       customer_type = 'standard', // Add this field with default value
       items,
       total_amount,
-      discountRate = 0, // 👈 add this //0 ahak kala
+      discount_rate, // Accept discount_rate from frontend
+      discountRate = discount_rate || 0, // Use discount_rate if available, otherwise default to 0
       quantity = 1,
       payment_method = 'card',
       status = 'completed',
@@ -370,6 +374,11 @@ router.post('/', async (req, res) => {
       end_date, //this is my valid until date
       daysUntilRenewal // Add this field
     } = req.body;
+    
+    console.log('🎯 After destructuring:');
+    console.log('- discount_rate:', discount_rate);
+    console.log('- discountRate:', discountRate);
+    console.log('- Will use discountRate:', discountRate, '(this should be 40)');
         const discountRateToInsert = discountRate;
 //     const {
 //       customerId: customer_id, // Map frontend field to backend field
@@ -438,9 +447,9 @@ router.post('/', async (req, res) => {
     const [result] = await connection.execute(`
       INSERT INTO sales (
         order_number, customer_id, customer_name, customer_email, customer_phone,
-        customer_type, items, total_amount, discount_rate, payment_method, status, order_date, notes,
+        customer_type, items, total_amount, discount_rate, discount_amount, payment_method, status, order_date, notes,
         end_date, days_until_renewal
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       orderNumber,
       customer_id || null,
@@ -451,6 +460,7 @@ router.post('/', async (req, res) => {
       JSON.stringify(items), 
       totalAmount,          // ✅ Final discounted total
       safeDiscountRate,     // ✅ Clean discount rate
+      discountAmount,       // ✅ Calculated discount amount
       payment_method,
       status,
       start_date || now,
