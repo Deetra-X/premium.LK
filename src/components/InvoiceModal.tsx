@@ -75,26 +75,26 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const isOverdue = invoice.status !== 'paid' && new Date() > invoice.dueDate;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden shadow-2xl">
         {/* Header - Non-printable */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 print:hidden">
           <div className="flex items-center gap-3">
-            <FileText size={24} className="text-blue-600" />
+            <FileText size={20} className="text-blue-600 sm:w-6 sm:h-6" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Invoice {invoice.invoiceNumber}</h2>
-              <p className="text-gray-600 text-sm">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Invoice {invoice.invoiceNumber}</h2>
+              <p className="text-gray-600 text-xs sm:text-sm">
                 {invoice.customerInfo.customerType === 'reseller' ? 'Reseller Invoice' : 'Standard Invoice'}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Status Selector */}
             <select
               value={currentStatus}
               onChange={(e) => handleStatusChange(e.target.value as Invoice['status'])}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
@@ -106,55 +106,53 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             {/* Action Buttons */}
             <button
               onClick={handleEmail}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs sm:text-sm"
             >
-              <Mail size={16} />
-              Email
+              <Mail size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Email</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-xs sm:text-sm"
             >
-              <Printer size={16} />
-              Print
+              <Printer size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Print</span>
             </button>
             <button
               onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-xs sm:text-sm"
             >
-              <Download size={16} />
-              PDF
+              <Download size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <X size={20} />
+              <X size={18} className="sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Invoice Content - A4 Optimized and Printable */}
-        <div className="p-8 overflow-y-auto max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6" 
+        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6" 
              style={{ 
-               width: '210mm', 
-               minHeight: '297mm', 
                maxWidth: '100%', 
                margin: '0 auto',
                fontSize: '12px',
                lineHeight: '1.4'
              }}>
           {/* Company Header */}
-          <div className="flex justify-between items-start mb-8 print:mb-6">
-            <div className="flex items-center gap-4">
-              <div className="text-4xl print:text-3xl">{companyInfo.logo}</div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 sm:gap-0 mb-6 sm:mb-8 print:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="text-2xl sm:text-4xl print:text-3xl">{companyInfo.logo}</div>
               <div>
-                <h1 className="text-2xl print:text-xl font-bold text-gray-900">{companyInfo.name}</h1>
-                <div className="text-gray-600 text-sm print:text-xs mt-1">
+                <h1 className="text-xl sm:text-2xl print:text-xl font-bold text-gray-900">{companyInfo.name}</h1>
+                <div className="text-gray-600 text-xs sm:text-sm print:text-xs mt-1">
                   <p>{companyInfo.address.street}</p>
                   <p>{companyInfo.address.city}, {companyInfo.address.state} {companyInfo.address.zipCode}</p>
                   <p>{companyInfo.address.country}</p>
-                  <div className="flex gap-4 mt-2 print:gap-2">
+                  <div className="flex flex-col sm:flex-row sm:gap-4 mt-2 print:gap-2">
                     <span>📞 {companyInfo.phone}</span>
                     <span>✉️ {companyInfo.email}</span>
                   </div>
@@ -164,42 +162,42 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               </div>
             </div>
 
-            <div className="text-right">
-              <h2 className="text-3xl print:text-2xl font-bold text-gray-900 mb-2">INVOICE</h2>
-              <div className="text-gray-600 print:text-xs">
-                <p className="text-lg print:text-sm font-semibold">{invoice.invoiceNumber}</p>
+            <div className="text-left sm:text-right">
+              <h2 className="text-2xl sm:text-3xl print:text-2xl font-bold text-gray-900 mb-2">INVOICE</h2>
+              <div className="text-gray-600 text-sm sm:text-base print:text-xs">
+                <p className="text-base sm:text-lg print:text-sm font-semibold">{invoice.invoiceNumber}</p>
                 <p>Issue Date: {formatDate(invoice.issueDate)}</p>
                 <p>Due Date: {formatDate(invoice.dueDate)}</p>
-                <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 print:text-xs ${getStatusColor(currentStatus)}`}>
+                <div className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium mt-2 print:text-xs ${getStatusColor(currentStatus)}`}>
                   {currentStatus.toUpperCase()}
                 </div>
                 {isOverdue && currentStatus !== 'paid' && (
-                  <p className="text-red-600 font-semibold mt-1 print:text-xs">OVERDUE</p>
+                  <p className="text-red-600 font-semibold mt-1 text-xs sm:text-sm print:text-xs">OVERDUE</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Customer Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-6 mb-8 print:mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 print:gap-6 mb-6 sm:mb-8 print:mb-6">
             <div>
-              <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-3 print:mb-2 flex items-center gap-2">
-                <User size={20} className="print:hidden" />
+              <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2 flex items-center gap-2">
+                <User size={16} className="sm:w-5 sm:h-5 print:hidden" />
                 Bill To:
               </h3>
-              <div className="bg-gray-50 p-4 print:p-3 rounded-lg print:border print:border-gray-300">
-                <p className="font-semibold text-gray-900 print:text-sm">{invoice.customerInfo.name}</p>
-                <div className="text-gray-600 print:text-xs mt-2 space-y-1">
+              <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
+                <p className="font-semibold text-gray-900 text-sm sm:text-base print:text-sm">{invoice.customerInfo.name}</p>
+                <div className="text-gray-600 print:text-xs mt-2 space-y-1 text-xs sm:text-sm">
                   {invoice.customerInfo.billingAddress ? (
                     <>
                       <p className="flex items-center gap-2">
-                        <MapPin size={14} className="print:hidden" />
+                        <MapPin size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
                         <span className="print:inline">{invoice.customerInfo.billingAddress.street}</span>
                       </p>
-                      <p className="ml-6 print:ml-0">
+                      <p className="ml-5 sm:ml-6 print:ml-0">
                         {invoice.customerInfo.billingAddress.city}, {invoice.customerInfo.billingAddress.state}
                       </p>
-                      <p className="ml-6 print:ml-0">
+                      <p className="ml-5 sm:ml-6 print:ml-0">
                         {invoice.customerInfo.billingAddress.zipCode}, {invoice.customerInfo.billingAddress.country}
                       </p>
                     </>
@@ -208,19 +206,19 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   )}
                   {invoice.customerInfo.phone && (
                     <p className="flex items-center gap-2 mt-3 print:mt-2">
-                      <Phone size={14} className="print:hidden" />
+                      <Phone size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
                       <span>{invoice.customerInfo.phone}</span>
                     </p>
                   )}
                   {invoice.customerInfo.email && (
                     <p className="flex items-center gap-2">
-                      <Mail size={14} className="print:hidden" />
-                      <span>{invoice.customerInfo.email}</span>
+                      <Mail size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
+                      <span className="break-all sm:break-normal">{invoice.customerInfo.email}</span>
                     </p>
                   )}
                   {invoice.customerInfo.taxId && (
                     <p className="flex items-center gap-2">
-                      <Receipt size={14} className="print:hidden" />
+                      <Receipt size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
                       <span>Tax ID: {invoice.customerInfo.taxId}</span>
                     </p>
                   )}
@@ -231,26 +229,26 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             {/* Reseller Information (if applicable) */}
             {invoice.customerInfo.customerType === 'reseller' && invoice.customerInfo.resellerInfo && (
               <div>
-                <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-3 print:mb-2 flex items-center gap-2">
-                  <Building size={20} className="print:hidden" />
+                <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2 flex items-center gap-2">
+                  <Building size={16} className="sm:w-5 sm:h-5 print:hidden" />
                   Reseller Information:
                 </h3>
-                <div className="bg-blue-50 p-4 print:p-3 rounded-lg border border-blue-200">
-                  <div className="space-y-2 print:space-y-1">
+                <div className="bg-blue-50 p-3 sm:p-4 print:p-3 rounded-lg border border-blue-200">
+                  <div className="space-y-2 print:space-y-1 text-xs sm:text-sm">
                     <p className="flex items-center gap-2 print:text-xs">
-                      <Tag size={14} className="text-blue-600 print:hidden" />
+                      <Tag size={12} className="sm:w-3.5 sm:h-3.5 text-blue-600 print:hidden flex-shrink-0" />
                       <span className="font-medium">Reseller ID:</span> {invoice.customerInfo.resellerInfo.resellerId}
                     </p>
                     <p className="flex items-center gap-2 print:text-xs">
-                      <Percent size={14} className="text-blue-600 print:hidden" />
+                      <Percent size={12} className="sm:w-3.5 sm:h-3.5 text-blue-600 print:hidden flex-shrink-0" />
                       <span className="font-medium">Discount Rate:</span> {invoice.customerInfo.resellerInfo.discountRate}%
                     </p>
                     <p className="flex items-center gap-2 print:text-xs">
-                      <Receipt size={14} className="text-blue-600 print:hidden" />
+                      <Receipt size={12} className="sm:w-3.5 sm:h-3.5 text-blue-600 print:hidden flex-shrink-0" />
                       <span className="font-medium">Min Order Qty:</span> {invoice.customerInfo.resellerInfo.minimumOrderQuantity}
                     </p>
                     {invoice.customerInfo.resellerInfo.specialTerms && (
-                      <p className="text-sm print:text-xs text-blue-700 mt-2 print:mt-1">
+                      <p className="text-xs sm:text-sm print:text-xs text-blue-700 mt-2 print:mt-1">
                         <span className="font-medium">Special Terms:</span> {invoice.customerInfo.resellerInfo.specialTerms}
                       </p>
                     )}
@@ -262,74 +260,109 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             {/* Payment Information (for standard customers) */}
             {invoice.customerInfo.customerType === 'standard' && (
               <div>
-                <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-3 print:mb-2 flex items-center gap-2">
-                  <CreditCard size={20} className="print:hidden" />
+                <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2 flex items-center gap-2">
+                  <CreditCard size={16} className="sm:w-5 sm:h-5 print:hidden" />
                   Payment Information:
                 </h3>
-                <div className="bg-gray-50 p-4 print:p-3 rounded-lg print:border print:border-gray-300">
-                  <p className="flex items-center gap-2 print:text-xs">
-                    <DollarSign size={14} className="print:hidden" />
+                <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
+                  <p className="flex items-center gap-2 print:text-xs text-xs sm:text-sm">
+                    <DollarSign size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
                     <span className="font-medium">Payment Method:</span> {invoice.paymentMethod?.replace('_', ' ')?.toUpperCase() || 'Not specified'}
                   </p>
-                  <p className="flex items-center gap-2 mt-2 print:mt-1 print:text-xs">
-                    <Calendar size={14} className="print:hidden" />
+                  <p className="flex items-center gap-2 mt-2 print:mt-1 print:text-xs text-xs sm:text-sm">
+                    <Calendar size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
                     <span className="font-medium">Payment Terms:</span>
                   </p>
-                  <p className="text-sm print:text-xs text-gray-600 mt-1">{invoice.paymentTerms || 'Standard terms apply'}</p>
+                  <p className="text-xs sm:text-sm print:text-xs text-gray-600 mt-1">{invoice.paymentTerms || 'Standard terms apply'}</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Invoice Items */}
-          <div className="mb-8 print:mb-6">
-            <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-4 print:mb-3">Items & Services</h3>
-            <div className="overflow-x-auto">
+          <div className="mb-6 sm:mb-8 print:mb-6">
+            <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-3 sm:mb-4 print:mb-3">Items & Services</h3>
+            
+            {/* Mobile View - Stacked Cards */}
+            <div className="block sm:hidden space-y-3 print:hidden">
+              {(invoice.items || []).map((item: any, index: number) => (
+                <div key={item.id || index} className="bg-gray-50 p-3 rounded-lg border">
+                  <div className="font-medium text-gray-900 mb-2">{item.productName}</div>
+                  {item.description && (
+                    <div className="text-xs text-gray-600 mb-2">{item.description}</div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                    <div>
+                      <span className="font-medium">Qty:</span> {item.quantity}
+                    </div>
+                    <div>
+                      <span className="font-medium">Unit Price:</span> {formatCurrency(item.unitPrice)}
+                    </div>
+                    {invoice.customerInfo.customerType === 'reseller' && (
+                      <>
+                        <div>
+                          <span className="font-medium">List Price:</span> {item.originalPrice ? formatCurrency(item.originalPrice) : '-'}
+                        </div>
+                        <div>
+                          <span className="font-medium">Discount:</span> {item.discountPercentage ? `-${item.discountPercentage}%` : '-'}
+                        </div>
+                      </>
+                    )}
+                    <div className="col-span-2 text-right pt-2 border-t border-gray-200">
+                      <span className="font-semibold text-gray-900">Total: {formatCurrency(item.lineTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View - Table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full border border-gray-200 print:text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left p-3 print:p-2 border-b border-gray-200 font-semibold">Description</th>
-                    <th className="text-center p-3 print:p-2 border-b border-gray-200 font-semibold">Qty</th>
+                    <th className="text-left p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">Description</th>
+                    <th className="text-center p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">Qty</th>
                     {invoice.customerInfo.customerType === 'reseller' && (
                       <>
-                        <th className="text-right p-3 print:p-2 border-b border-gray-200 font-semibold">List Price</th>
-                        <th className="text-center p-3 print:p-2 border-b border-gray-200 font-semibold">Discount</th>
+                        <th className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">List Price</th>
+                        <th className="text-center p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">Discount</th>
                       </>
                     )}
-                    <th className="text-right p-3 print:p-2 border-b border-gray-200 font-semibold">Unit Price</th>
-                    <th className="text-right p-3 print:p-2 border-b border-gray-200 font-semibold">Total</th>
+                    <th className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">Unit Price</th>
+                    <th className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(invoice.items || []).map((item, index) => (
-                    <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="p-3 print:p-2 border-b border-gray-200">
+                  {(invoice.items || []).map((item: any, index: number) => (
+                    <tr key={item.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="p-2 sm:p-3 print:p-2 border-b border-gray-200">
                         <div>
-                          <p className="font-medium text-gray-900">{item.productName}</p>
+                          <p className="font-medium text-gray-900 text-xs sm:text-sm">{item.productName}</p>
                           {item.description && (
-                            <p className="text-sm print:text-xs text-gray-600">{item.description}</p>
+                            <p className="text-xs print:text-xs text-gray-600">{item.description}</p>
                           )}
                         </div>
                       </td>
-                      <td className="text-center p-3 print:p-2 border-b border-gray-200">{item.quantity}</td>
+                      <td className="text-center p-2 sm:p-3 print:p-2 border-b border-gray-200 text-xs sm:text-sm">{item.quantity}</td>
                       {invoice.customerInfo.customerType === 'reseller' && (
                         <>
-                          <td className="text-right p-3 print:p-2 border-b border-gray-200">
+                          <td className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 text-xs sm:text-sm">
                             {item.originalPrice ? formatCurrency(item.originalPrice) : '-'}
                           </td>
-                          <td className="text-center p-3 print:p-2 border-b border-gray-200">
+                          <td className="text-center p-2 sm:p-3 print:p-2 border-b border-gray-200">
                             {item.discountPercentage ? (
-                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm print:text-xs">
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs print:text-xs">
                                 -{item.discountPercentage}%
                               </span>
                             ) : '-'}
                           </td>
                         </>
                       )}
-                      <td className="text-right p-3 print:p-2 border-b border-gray-200">
+                      <td className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 text-xs sm:text-sm">
                         {formatCurrency(item.unitPrice)}
                       </td>
-                      <td className="text-right p-3 print:p-2 border-b border-gray-200 font-semibold">
+                      <td className="text-right p-2 sm:p-3 print:p-2 border-b border-gray-200 font-semibold text-xs sm:text-sm">
                         {formatCurrency(item.lineTotal)}
                       </td>
                     </tr>
@@ -340,20 +373,20 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           </div>
 
           {/* Totals */}
-          <div className="flex justify-end mb-8 print:mb-6">
-            <div className="w-full max-w-md">
-              <div className="bg-gray-50 p-4 print:p-3 rounded-lg print:border print:border-gray-300">
+          <div className="flex justify-center sm:justify-end mb-6 sm:mb-8 print:mb-6">
+            <div className="w-full sm:max-w-md">
+              <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
                 {invoice.customerInfo.customerType === 'reseller' && (invoice.discountAmount || 0) > 0 && (
                   <>
-                    <div className="flex justify-between py-2 print:py-1 print:text-xs">
+                    <div className="flex justify-between py-1 sm:py-2 print:py-1 print:text-xs text-xs sm:text-sm">
                       <span className="text-gray-600">Subtotal (List Price):</span>
                       <span className="font-semibold">{formatCurrency(invoice.subtotal || 0)}</span>
                     </div>
-                    <div className="flex justify-between py-2 print:py-1 text-green-700 print:text-xs">
+                    <div className="flex justify-between py-1 sm:py-2 print:py-1 text-green-700 print:text-xs text-xs sm:text-sm">
                       <span>Reseller Discount ({invoice.discountPercentage || 0}%):</span>
                       <span className="font-semibold">-{formatCurrency(invoice.discountAmount || 0)}</span>
                     </div>
-                    <div className="flex justify-between py-2 print:py-1 border-t border-gray-200 print:text-xs">
+                    <div className="flex justify-between py-1 sm:py-2 print:py-1 border-t border-gray-200 print:text-xs text-xs sm:text-sm">
                       <span className="text-gray-600">Discounted Subtotal:</span>
                       <span className="font-semibold">{formatCurrency((invoice.subtotal || 0) - (invoice.discountAmount || 0))}</span>
                     </div>
@@ -361,18 +394,18 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 )}
                 
                 {invoice.customerInfo.customerType === 'standard' && (
-                  <div className="flex justify-between py-2 print:py-1 print:text-xs">
+                  <div className="flex justify-between py-1 sm:py-2 print:py-1 print:text-xs text-xs sm:text-sm">
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-semibold">{formatCurrency(invoice.subtotal || 0)}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between py-2 print:py-1 print:text-xs">
+                <div className="flex justify-between py-1 sm:py-2 print:py-1 print:text-xs text-xs sm:text-sm">
                   <span className="text-gray-600">Tax ({invoice.taxRate || 0}%):</span>
                   <span className="font-semibold">{formatCurrency(invoice.taxAmount || 0)}</span>
                 </div>
                 
-                <div className="flex justify-between py-3 print:py-2 border-t border-gray-300 text-lg print:text-sm">
+                <div className="flex justify-between py-2 sm:py-3 print:py-2 border-t border-gray-300 text-base sm:text-lg print:text-sm">
                   <span className="font-bold text-gray-900">Total Amount:</span>
                   <span className="font-bold text-gray-900">{formatCurrency(invoice.totalAmount || 0)}</span>
                 </div>
@@ -381,31 +414,31 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           </div>
 
           {/* Payment Methods Accepted */}
-          <div className="mb-8 print:mb-6">
-            <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-3 print:mb-2">Payment Methods Accepted</h3>
-            <div className="bg-gray-50 p-4 print:p-3 rounded-lg print:border print:border-gray-300">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:gap-2 text-sm print:text-xs">
+          <div className="mb-6 sm:mb-8 print:mb-6">
+            <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2">Payment Methods Accepted</h3>
+            <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 print:gap-2 text-xs sm:text-sm print:text-xs">
                 <div className="flex items-center gap-2">
-                  <CreditCard size={16} className="text-blue-600 print:hidden" />
+                  <CreditCard size={14} className="sm:w-4 sm:h-4 text-blue-600 print:hidden flex-shrink-0" />
                   <span>Credit/Debit Cards</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign size={16} className="text-green-600 print:hidden" />
+                  <DollarSign size={14} className="sm:w-4 sm:h-4 text-green-600 print:hidden flex-shrink-0" />
                   <span>Cash</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Building size={16} className="text-purple-600 print:hidden" />
+                  <Building size={14} className="sm:w-4 sm:h-4 text-purple-600 print:hidden flex-shrink-0" />
                   <span>Bank Transfer</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Receipt size={16} className="text-orange-600 print:hidden" />
+                  <Receipt size={14} className="sm:w-4 sm:h-4 text-orange-600 print:hidden flex-shrink-0" />
                   <span>Check</span>
                 </div>
               </div>
               
               {invoice.customerInfo.customerType === 'reseller' && (
                 <div className="mt-3 print:mt-2 pt-3 print:pt-2 border-t border-gray-200">
-                  <p className="text-sm print:text-xs text-blue-700">
+                  <p className="text-xs sm:text-sm print:text-xs text-blue-700">
                     <strong>Reseller Payment Terms:</strong> {invoice.paymentTerms || 'Standard reseller terms apply'}
                   </p>
                 </div>
@@ -415,16 +448,16 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
           {/* Notes */}
           {invoice.notes && (
-            <div className="mb-8 print:mb-6">
-              <h3 className="text-lg print:text-sm font-semibold text-gray-900 mb-3 print:mb-2">Notes</h3>
-              <div className="bg-yellow-50 border border-yellow-200 p-4 print:p-3 rounded-lg">
-                <p className="text-gray-700 print:text-xs">{invoice.notes}</p>
+            <div className="mb-6 sm:mb-8 print:mb-6">
+              <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2">Notes</h3>
+              <div className="bg-yellow-50 border border-yellow-200 p-3 sm:p-4 print:p-3 rounded-lg">
+                <p className="text-gray-700 print:text-xs text-xs sm:text-sm">{invoice.notes}</p>
               </div>
             </div>
           )}
 
           {/* Footer */}
-          <div className="border-t border-gray-200 pt-6 print:pt-4 text-center text-sm print:text-xs text-gray-600">
+          <div className="border-t border-gray-200 pt-4 sm:pt-6 print:pt-4 text-center text-xs sm:text-sm print:text-xs text-gray-600">
             <p>Thank you for your business!</p>
             <p className="mt-2 print:mt-1">
               For questions about this invoice, please contact us at {companyInfo.email} or {companyInfo.phone}

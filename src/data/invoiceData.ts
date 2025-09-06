@@ -1,4 +1,4 @@
-import { Invoice } from '../types';
+import { Invoice } from '../types/index';
 
 // Base API URL for invoice operations
 const API_BASE_URL = 'http://localhost:3001/api';

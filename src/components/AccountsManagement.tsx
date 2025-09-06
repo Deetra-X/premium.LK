@@ -6,7 +6,6 @@ import {
   Edit3, 
   Trash2, 
   Calendar, 
-  Mail, 
   DollarSign,
   AlertCircle,
   CheckCircle,
@@ -16,17 +15,14 @@ import {
   Users,
   User,
   Crown,
-  Shield,
   Clock,
   Zap,
-  Folder,
   Settings,
   Grid3X3,
   List,
-  Tag,
   ArrowRight
 } from 'lucide-react';
-import { Account, ProductCategory } from '../types';
+import { Account, ProductCategory } from '../types/index';
 import { fetchAccounts, deleteAccount } from '../api/Accounts';
 import { fetchCategories } from '../api/Categories';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
@@ -320,8 +316,6 @@ export const AccountsManagement: React.FC = () => {
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-2">
               {account.productName}
-              {account.isDeleting && <span className="ml-2 text-yellow-400 text-sm">Deleting...</span>}
-              {account.deleteFailed && <span className="ml-2 text-red-400 text-sm">Delete Failed</span>}
             </h3>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">{getServiceTypeIcon(account.serviceType)}</span>
@@ -361,29 +355,10 @@ export const AccountsManagement: React.FC = () => {
             </button>
             <button
               onClick={() => handleDeleteAccount(account.id)}
-              disabled={account.isDeleting}
-              className={`
-                p-2 rounded-lg transition-colors
-                ${account.isDeleting 
-                  ? 'bg-yellow-600 cursor-not-allowed opacity-50' 
-                  : account.deleteFailed
-                    ? 'bg-red-600 hover:bg-red-700 text-white border-2 border-red-400'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                }
-              `}
-              title={
-                account.isDeleting 
-                  ? 'Deleting account...' 
-                  : account.deleteFailed 
-                    ? 'Previous delete failed - click to retry'
-                    : 'Delete account permanently'
-              }
+              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              title="Delete account permanently"
             >
-              {account.isDeleting ? (
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              ) : (
-                <Trash2 size={16} />
-              )}
+              <Trash2 size={16} />
             </button>
           </div>
         </div>
@@ -547,14 +522,14 @@ export const AccountsManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Comprehensive Account Inventory</h1>
-          <p className="text-gray-400 mt-2">Manage subscription accounts with detailed user slot tracking</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Account Management</h1>
+          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Manage subscription accounts with detailed user slot tracking</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
           >
             {loading ? (
               <>
@@ -562,88 +537,92 @@ export const AccountsManagement: React.FC = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Refreshing...
+                <span className="hidden sm:inline">Refreshing...</span>
+                <span className="sm:hidden">Refresh</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh Data
+                <span className="hidden sm:inline">Refresh Data</span>
+                <span className="sm:hidden">Refresh</span>
               </>
             )}
           </button>
           <button
             onClick={() => setShowCategoryModal(true)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
           >
-            <Settings size={20} />
-            Manage Categories
+            <Settings size={18} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Manage Categories</span>
+            <span className="sm:hidden">Categories</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
           >
-            <Plus size={20} />
-            Add Account
+            <Plus size={18} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Add Account</span>
+            <span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>
 
       {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Total Active</p>
-              <p className="text-xl font-bold text-white mt-1">{activeAccountsCount}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{activeAccountsCount}</p>
             </div>
-            <CheckCircle size={24} className="text-green-400" />
+            <CheckCircle size={20} className="text-green-400 sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Renewable</p>
-              <p className="text-xl font-bold text-white mt-1">{renewableAccountsCount}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{renewableAccountsCount}</p>
             </div>
-            <Calendar size={24} className="text-blue-400" />
+            <Calendar size={20} className="text-blue-400 sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Expiring Soon</p>
-              <p className="text-xl font-bold text-white mt-1">{expiringSoonCount}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{expiringSoonCount}</p>
             </div>
-            <AlertCircle size={24} className="text-orange-400" />
+            <AlertCircle size={20} className="text-orange-400 sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Shared Accounts</p>
-              <p className="text-xl font-bold text-white mt-1">{sharedAccountsCount}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{sharedAccountsCount}</p>
             </div>
-            <Users size={24} className="text-purple-400" />
+            <Users size={20} className="text-purple-400 sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Active Users</p>
-              <p className="text-xl font-bold text-white mt-1">{totalUserSlots}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{totalUserSlots}</p>
             </div>
-            <User size={24} className="text-cyan-400" />
+            <User size={20} className="text-cyan-400 sm:w-6 sm:h-6" />
           </div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Available Slots</p>
-              <p className="text-xl font-bold text-white mt-1">{availableSlots}</p>
+              <p className="text-lg sm:text-xl font-bold text-white mt-1">{availableSlots}</p>
             </div>
-            <Zap size={24} className="text-yellow-400" />
+            <Zap size={20} className="text-yellow-400 sm:w-6 sm:h-6" />
           </div>
         </div>
       </div>
@@ -658,7 +637,7 @@ export const AccountsManagement: React.FC = () => {
           </div>
 
           {/* Category Buttons Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
             {categories.map(category => {
               const accountCount = categoryAccountCounts[category.id] || 0;
               
@@ -666,17 +645,17 @@ export const AccountsManagement: React.FC = () => {
                 <button
                   key={category.id}
                   onClick={() => handleCategoryClick(category.id)}
-                  className={`p-6 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-lg ${category.color} border hover:border-opacity-60 group`}
+                  className={`p-4 sm:p-6 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-lg ${category.color} border hover:border-opacity-60 group`}
                 >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="text-4xl mb-2">{category.icon}</div>
-                    <h3 className="text-lg font-semibold">{category.name}</h3>
-                    <p className="text-sm opacity-80 line-clamp-2">{category.description}</p>
-                    <div className="flex items-center justify-between w-full mt-4">
-                      <span className="text-2xl font-bold">{accountCount}</span>
+                  <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                    <div className="text-2xl sm:text-4xl mb-1 sm:mb-2">{category.icon}</div>
+                    <h3 className="text-base sm:text-lg font-semibold">{category.name}</h3>
+                    <p className="text-xs sm:text-sm opacity-80 line-clamp-2">{category.description}</p>
+                    <div className="flex items-center justify-between w-full mt-2 sm:mt-4">
+                      <span className="text-lg sm:text-2xl font-bold">{accountCount}</span>
                       <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <span className="text-sm">View</span>
-                        <ArrowRight size={16} />
+                        <span className="text-xs sm:text-sm">View</span>
+                        <ArrowRight size={14} className="sm:w-4 sm:h-4" />
                       </div>
                     </div>
                   </div>
@@ -688,17 +667,17 @@ export const AccountsManagement: React.FC = () => {
             {categoryAccountCounts['uncategorized'] > 0 && (
               <button
                 onClick={() => handleCategoryClick('uncategorized')}
-                className="p-6 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gray-500/20 text-gray-300 border-gray-500/30 hover:border-opacity-60 group"
+                className="p-4 sm:p-6 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-lg bg-gray-500/20 text-gray-300 border-gray-500/30 hover:border-opacity-60 group"
               >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="text-4xl mb-2">📂</div>
-                  <h3 className="text-lg font-semibold">Uncategorized</h3>
-                  <p className="text-sm opacity-80">Accounts without a category</p>
-                  <div className="flex items-center justify-between w-full mt-4">
-                    <span className="text-2xl font-bold">{categoryAccountCounts['uncategorized']}</span>
+                <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                  <div className="text-2xl sm:text-4xl mb-1 sm:mb-2">📂</div>
+                  <h3 className="text-base sm:text-lg font-semibold">Uncategorized</h3>
+                  <p className="text-xs sm:text-sm opacity-80">Accounts without a category</p>
+                  <div className="flex items-center justify-between w-full mt-2 sm:mt-4">
+                    <span className="text-lg sm:text-2xl font-bold">{categoryAccountCounts['uncategorized']}</span>
                     <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <span className="text-sm">View</span>
-                      <ArrowRight size={16} />
+                      <span className="text-xs sm:text-sm">View</span>
+                      <ArrowRight size={14} className="sm:w-4 sm:h-4" />
                     </div>
                   </div>
                 </div>
@@ -748,28 +727,28 @@ export const AccountsManagement: React.FC = () => {
           </div>
 
           {/* Search and Filter Controls */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
               {/* Search */}
               <div className="relative flex-1">
-                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 sm:w-5 sm:h-5" />
                 <input
                   type="text"
                   placeholder="Search accounts, holders, brands, or emails..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 sm:pl-12 pr-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
               </div>
               
-              {/* Filters */}
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Filter size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              {/* Filters Row */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
+                <div className="relative flex-1 sm:flex-none">
+                  <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 sm:w-5 sm:h-5" />
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value as 'all' | 'renewable' | 'non-renewable' | 'expired')}
-                    className="pl-10 pr-8 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                    className="w-full sm:w-auto pl-10 sm:pl-12 pr-8 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none text-sm sm:text-base"
                   >
                     <option value="all">All Status</option>
                     <option value="renewable">Renewable</option>
@@ -781,7 +760,7 @@ export const AccountsManagement: React.FC = () => {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value as 'all' | 'shared' | 'individual')}
-                  className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                  className="w-full sm:w-auto px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none text-sm sm:text-base"
                 >
                   <option value="all">All Types</option>
                   <option value="shared">Shared/Family</option>
@@ -789,46 +768,46 @@ export const AccountsManagement: React.FC = () => {
                 </select>
 
                 {/* View Mode Toggle */}
-                <div className="flex bg-slate-700 rounded-lg border border-slate-600">
+                <div className="flex bg-slate-700 rounded-lg border border-slate-600 self-start">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-l-lg transition-colors ${
+                    className={`p-2 sm:p-3 rounded-l-lg transition-colors ${
                       viewMode === 'grid' 
                         ? 'bg-blue-600 text-white' 
                         : 'text-gray-400 hover:text-white'
                     }`}
                     title="Grid View"
                   >
-                    <Grid3X3 size={16} />
+                    <Grid3X3 size={16} className="sm:w-5 sm:h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-r-lg transition-colors ${
+                    className={`p-2 sm:p-3 rounded-r-lg transition-colors ${
                       viewMode === 'list' 
                         ? 'bg-blue-600 text-white' 
                         : 'text-gray-400 hover:text-white'
                     }`}
                     title="List View"
                   >
-                    <List size={16} />
+                    <List size={16} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Accounts Display - Always Grid Mode */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Accounts Display - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
             {filteredAccounts.map(renderAccountCard)}
           </div>
 
           {filteredAccounts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="bg-slate-800 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                <Search size={32} className="text-gray-400" />
+            <div className="text-center py-8 sm:py-12 col-span-full">
+              <div className="bg-slate-800 rounded-full p-4 sm:p-6 w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 flex items-center justify-center">
+                <Search size={24} className="text-gray-400 sm:w-8 sm:h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">No accounts found</h3>
-              <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No accounts found</h3>
+              <p className="text-sm sm:text-base text-gray-400">Try adjusting your search or filter criteria</p>
             </div>
           )}
         </div>
@@ -845,7 +824,7 @@ export const AccountsManagement: React.FC = () => {
       {/* Account Details Modal */}
       {showDetailsModal && selectedAccount && (
         <AccountDetailsModal
-          accountId={selectedAccount.id}
+          accountEmail={selectedAccount.email}
           onClose={() => {
             setShowDetailsModal(false);
             setSelectedAccount(null);

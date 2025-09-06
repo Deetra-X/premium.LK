@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   X
 } from '../utils/icons'; // Use centralized imports
-import { CreateSaleData, Sale } from '../types/index'; // Customer import removed - using sales only
+import { CreateSaleData, Sale, Invoice } from '../types/index'; // Customer import removed - using sales only
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CreateOrderModal } from './CreateOrderModal';
 import { InvoiceManagement } from './InvoiceManagement';
@@ -766,77 +766,81 @@ export const SalesManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Sales Management</h1>
-          <p className="text-gray-400 mt-2">Process new orders and manage sales records</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Sales Management</h1>
+          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Process new orders and manage sales records</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={loadData}
-            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base"
           >
-            <RefreshCw size={16} />
-            Refresh
+            <RefreshCw size={16} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
           <button
             onClick={() => setShowCreateOrder(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors font-medium text-sm sm:text-base"
           >
-            <Plus size={20} />
-            Create New Order
+            <Plus size={18} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Create New Order</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
 
       {/* Tab Navigation */}
       <div className="bg-slate-800 rounded-lg border border-slate-700">
-        <div className="flex border-b border-slate-700">
+        <div className="flex border-b border-slate-700 overflow-x-auto">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === 'orders' 
                 ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-700/50' 
                 : 'text-gray-400 hover:text-white hover:bg-slate-700/30'
             }`}
           >
-            <ShoppingCart size={16} />
-            Order History ({sales.length})
+            <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Order History ({sales.length})</span>
+            <span className="sm:hidden">Orders ({sales.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('invoices')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
-              activeTab === 'invoices' 
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+              (activeTab as string) === 'invoices'
                 ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-700/50' 
                 : 'text-gray-400 hover:text-white hover:bg-slate-700/30'
             }`}
           >
-            <FileText size={16} />
-            Invoice Management
+            <FileText size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Invoice Management</span>
+            <span className="sm:hidden">Invoices</span>
           </button>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Search by customer, order number, or product..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-8 sm:pl-10 pr-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             {/* Filters */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <div className="relative">
-                <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
                 <select
                   value={filterPeriod}
                   onChange={(e) => setFilterPeriod(e.target.value as 'all' | 'today' | 'week' | 'month')}
-                  className="pl-10 pr-8 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
+                  className="pl-8 sm:pl-10 pr-6 sm:pr-8 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
                 >
                   <option value="all">All Time</option>
                   <option value="today">Today</option>
@@ -848,7 +852,7 @@ export const SalesManagement: React.FC = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as 'all' | 'completed' | 'pending' | 'cancelled')}
-                className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[120px]"
+                className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[120px]"
               >
                 <option value="all">All Status</option>
                 <option value="completed">Completed</option>
@@ -859,7 +863,7 @@ export const SalesManagement: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'customer' | 'orderNumber')}
-                className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
+                className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
               >
                 <option value="date">Sort by Date</option>
                 <option value="amount">Sort by Amount</option>
@@ -869,7 +873,7 @@ export const SalesManagement: React.FC = () => {
 
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white hover:bg-slate-600 transition-colors"
+                className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-white hover:bg-slate-600 transition-colors text-xs sm:text-sm"
                 title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
               >
                 {sortOrder === 'desc' ? '↓' : '↑'}
@@ -881,10 +885,10 @@ export const SalesManagement: React.FC = () => {
 
       {/* Order History */}
       <div className="bg-slate-800 rounded-lg border border-slate-700">
-        <div className="p-6 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Order History</h2>
-            <div className="text-sm text-gray-400">
+        <div className="p-4 sm:p-6 border-b border-slate-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Order History</h2>
+            <div className="text-xs sm:text-sm text-gray-400">
               {filteredSales.length} order{filteredSales.length !== 1 ? 's' : ''} found
             </div>
           </div>
@@ -904,26 +908,26 @@ export const SalesManagement: React.FC = () => {
             </div>
           ) : (
             filteredSales.map((sale) => (
-              <div key={sale.order_number} className="p-6 hover:bg-slate-700/50 transition-colors">
-                <div className="flex items-start justify-between mb-4">
+              <div key={sale.order_number} className="p-4 sm:p-6 hover:bg-slate-700/50 transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
                   {/* Order Header */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-white">
                         {sale.order_number}
                       </h3>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(sale.status || 'pending')}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full self-start ${getStatusColor(sale.status || 'pending')}`}>
                         {sale.status ? (sale.status.charAt(0).toUpperCase() + sale.status.slice(1)) : 'Pending'}
                       </span>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-gray-400" />
+                        <Calendar size={16} className="text-gray-400 w-4 h-4" />
                         <span className="text-gray-300">{formatDate(new Date(sale.order_date))}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Package size={16} className="text-gray-400" />
+                        <Package size={16} className="text-gray-400 w-4 h-4" />
                         <span className="text-gray-300">{sale.customer_name}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -935,9 +939,9 @@ export const SalesManagement: React.FC = () => {
                   </div>
 
                   {/* Order Total and Actions */}
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-green-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="text-left sm:text-right">
+                      <div className="text-xl sm:text-2xl font-bold text-green-400">
                         {formatCurrency(sale.total_amount)}
                       </div>
                       <div className="text-sm text-gray-400">
@@ -945,42 +949,41 @@ export const SalesManagement: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setSelectedOrder(selectedOrder?.id === sale.order_number ? null : sale)}
                         className="p-2 text-blue-400 hover:text-blue-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="View Details"
                       >
-                        <Eye size={18} />
+                        <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
-                      {/* // Edit, Reorder, Create Invoice, Delete buttons */}
                       <button
                         onClick={() => setEditingOrder(sale)}
                         className="p-2 text-yellow-400 hover:text-yellow-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Edit Order"
                       >
-                        <Edit size={18} />
+                        <Edit size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
                       <button
                         onClick={() => handleReorder(sale)}
                         className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Reorder"
                       >
-                        <RefreshCw size={18} />
+                        <RefreshCw size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
                       <button
                         onClick={() => { setSelectedSaleForInvoice(sale.order_number); setShowCreateInvoice(true); }}
                         className="p-2 text-purple-400 hover:text-purple-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Create Invoice"
                       >
-                        <Receipt size={18} />
+                        <Receipt size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(sale.order_number)}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Delete Order"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
                     </div>
                   </div>
@@ -992,14 +995,14 @@ export const SalesManagement: React.FC = () => {
                     <h4 className="text-sm font-medium text-gray-300 mb-3">Order Items:</h4>
                     <div className="space-y-2">
                       {(sale.items || []).map((item: {productName?: string, product_name?: string, price?: number, quantity?: number}, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-slate-600 rounded-lg">
-                          <div>
+                        <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-600 rounded-lg">
+                          <div className="flex-1">
                             <p className="text-white font-medium">{item.productName || item.product_name || 'Unknown Product'}</p>
                             <p className="text-gray-400 text-sm">
                               Quantity: {item.quantity || 1} × {formatCurrency(item.price || 0)}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-left sm:text-right">
                             <p className="text-white font-semibold">
                               {formatCurrency((item.price || 0) * (item.quantity || 1))}
                             </p>
@@ -1009,9 +1012,9 @@ export const SalesManagement: React.FC = () => {
                     </div>
                     
                     <div className="mt-4 p-3 bg-slate-600 rounded-lg">
-                      <div className="flex justify-between items-center">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                         <span className="text-gray-300">Customer Contact:</span>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                           <p className="text-white">{sale.customer_email}</p>
                           <p className="text-gray-400 text-sm">{sale.payment_method || 'N/A'}</p>
                         </div>
@@ -1034,24 +1037,24 @@ export const SalesManagement: React.FC = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md w-full">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6 max-w-md w-full">
             <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle size={24} className="text-red-400" />
-              <h3 className="text-lg font-semibold text-white">Confirm Deletion</h3>
+              <AlertTriangle size={20} className="text-red-400 sm:w-6 sm:h-6" />
+              <h3 className="text-base sm:text-lg font-semibold text-white">Confirm Deletion</h3>
             </div>
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-300 mb-6 text-sm sm:text-base">
               Are you sure you want to delete this order? This action cannot be undone.
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteOrder(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 Delete
               </button>
@@ -1086,7 +1089,8 @@ export const SalesManagement: React.FC = () => {
             setShowCreateInvoice(false);
             setSelectedSaleForInvoice('');
           }}
-          onCreate={() => {
+          onCreate={(invoice: Invoice) => {
+            console.log('Invoice created:', invoice);
             setShowCreateInvoice(false);
             setSelectedSaleForInvoice('');
             setActiveTab('invoices');

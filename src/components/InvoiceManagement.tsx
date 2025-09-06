@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   XCircle
 } from 'lucide-react';
-import { Invoice } from '../types';
+import { Invoice } from '../types/index';
 import { getInvoices, updateInvoiceStatus } from '../data/invoiceData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CreateInvoiceModal } from './CreateInvoiceModal';
@@ -181,8 +181,8 @@ export const InvoiceManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Invoice Management</h1>
-          <p className="text-gray-400 mt-2">Create and manage detailed sales invoices</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Invoice Management</h1>
+          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Create and manage detailed sales invoices</p>
         </div>
         <button
           onClick={() => {
@@ -190,10 +190,11 @@ export const InvoiceManagement: React.FC = () => {
             setShowCreateModal(true)
           }}
 
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors font-medium text-sm sm:text-base"
         >
-          <Plus size={20} />
-          Create Invoice
+          <Plus size={18} className="sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Create Invoice</span>
+          <span className="sm:hidden">Create</span>
         </button>
       </div>
 
@@ -261,28 +262,28 @@ export const InvoiceManagement: React.FC = () => {
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="relative flex-1">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Search by invoice number, customer name, email, or reseller ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-8 sm:pl-10 pr-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <div className="relative">
-              <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="pl-10 pr-8 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
+                className="pl-8 sm:pl-10 pr-6 sm:pr-8 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -296,7 +297,7 @@ export const InvoiceManagement: React.FC = () => {
             <select
               value={filterCustomerType}
               onChange={(e) => setFilterCustomerType(e.target.value as any)}
-              className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
+              className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
             >
               <option value="all">All Customers</option>
               <option value="standard">Standard</option>
@@ -308,10 +309,10 @@ export const InvoiceManagement: React.FC = () => {
 
       {/* Invoices List */}
       <div className="bg-slate-800 rounded-lg border border-slate-700">
-        <div className="p-6 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Invoices</h2>
-            <div className="text-sm text-gray-400">
+        <div className="p-4 sm:p-6 border-b border-slate-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Invoices</h2>
+            <div className="text-xs sm:text-sm text-gray-400">
               {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} found
             </div>
           </div>
@@ -329,15 +330,15 @@ export const InvoiceManagement: React.FC = () => {
               const isOverdue = invoice.status !== 'paid' && new Date() > invoice.dueDate;
               
               return (
-                <div key={invoice.id} className="p-6 hover:bg-slate-700/50 transition-colors">
-                  <div className="flex items-start justify-between mb-4">
+                <div key={invoice.id} className="p-4 sm:p-6 hover:bg-slate-700/50 transition-colors">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
                     {/* Invoice Header */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3">
                         <h3 className="text-lg font-semibold text-white">
                           {invoice.invoiceNumber}
                         </h3>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center flex-wrap gap-2">
                           {getStatusIcon(invoice.status)}
                           <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(invoice.status)}`}>
                             {invoice.status.toUpperCase()}
@@ -356,34 +357,34 @@ export const InvoiceManagement: React.FC = () => {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <User size={16} className="text-gray-400" />
-                          <div>
-                            <p className="text-white font-medium">{invoice.customerInfo.name}</p>
-                            <p className="text-gray-400">{invoice.customerInfo.email}</p>
+                          <User size={16} className="text-gray-400 w-4 h-4" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-white font-medium truncate">{invoice.customerInfo.name}</p>
+                            <p className="text-gray-400 truncate">{invoice.customerInfo.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-400" />
-                          <div>
-                            <p className="text-gray-300">Issue: {formatDate(invoice.issueDate)}</p>
-                            <p className="text-gray-400">Due: {formatDate(invoice.dueDate)}</p>
+                          <Calendar size={16} className="text-gray-400 w-4 h-4" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-gray-300 text-xs sm:text-sm">Issue: {formatDate(invoice.issueDate)}</p>
+                            <p className="text-gray-400 text-xs sm:text-sm">Due: {formatDate(invoice.dueDate)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-gray-400" />
-                          <div>
-                            <p className="text-gray-300">{invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}</p>
-                            <p className="text-gray-400">{invoice.paymentMethod.replace('_', ' ')}</p>
+                          <FileText size={16} className="text-gray-400 w-4 h-4" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-gray-300 text-xs sm:text-sm">{invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}</p>
+                            <p className="text-gray-400 text-xs sm:text-sm truncate">{invoice.paymentMethod.replace('_', ' ')}</p>
                           </div>
                         </div>
                         {invoice.customerInfo.customerType === 'reseller' && invoice.customerInfo.resellerInfo && (
                           <div className="flex items-center gap-2">
-                            <Building size={16} className="text-purple-400" />
-                            <div>
-                              <p className="text-purple-300">ID: {invoice.customerInfo.resellerInfo.resellerId}</p>
-                              <p className="text-purple-400">{invoice.customerInfo.resellerInfo.discountRate}% discount</p>
+                            <Building size={16} className="text-purple-400 w-4 h-4" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-purple-300 text-xs sm:text-sm truncate">ID: {invoice.customerInfo.resellerInfo.resellerId}</p>
+                              <p className="text-purple-400 text-xs sm:text-sm">{invoice.customerInfo.resellerInfo.discountRate}% discount</p>
                             </div>
                           </div>
                         )}
@@ -391,9 +392,9 @@ export const InvoiceManagement: React.FC = () => {
                     </div>
 
                     {/* Invoice Total and Actions */}
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-400">
+                    <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center gap-4">
+                      <div className="text-left sm:text-right lg:text-left xl:text-right">
+                        <div className="text-xl sm:text-2xl font-bold text-green-400">
                           {formatCurrency(invoice.totalAmount)}
                         </div>
                         {invoice.customerInfo.customerType === 'reseller' && invoice.discountAmount > 0 && (
@@ -407,27 +408,27 @@ export const InvoiceManagement: React.FC = () => {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => handleViewInvoice(invoice)}
                           className="p-2 text-blue-400 hover:text-blue-300 hover:bg-slate-600 rounded-lg transition-colors"
                           title="View Invoice"
                         >
-                          <Eye size={18} />
+                          <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                         <button
                           onClick={() => alert('Download functionality would be implemented here')}
                           className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded-lg transition-colors"
                           title="Download PDF"
                         >
-                          <Download size={18} />
+                          <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                         <button
                           onClick={() => alert('Email functionality would be implemented here')}
                           className="p-2 text-purple-400 hover:text-purple-300 hover:bg-slate-600 rounded-lg transition-colors"
                           title="Send Email"
                         >
-                          <Mail size={18} />
+                          <Mail size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                       </div>
                     </div>
@@ -435,11 +436,11 @@ export const InvoiceManagement: React.FC = () => {
 
                   {/* Invoice Items Preview */}
                   <div className="mt-4 pt-4 border-t border-slate-600">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {invoice.items.slice(0, 3).map((item, index) => (
-                        <div key={item.id} className="flex items-center justify-between p-3 bg-slate-600 rounded-lg">
-                          <div>
-                            <p className="text-white font-medium">{item.productName}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                      {invoice.items.slice(0, 3).map((item) => (
+                        <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-600 rounded-lg">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-white font-medium truncate">{item.productName}</p>
                             <p className="text-gray-400 text-sm">
                               Qty: {item.quantity} × {formatCurrency(item.unitPrice)}
                               {item.discountPercentage && (
@@ -447,7 +448,7 @@ export const InvoiceManagement: React.FC = () => {
                               )}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-left sm:text-right">
                             <p className="text-white font-semibold">
                               {formatCurrency(item.lineTotal)}
                             </p>
@@ -461,7 +462,7 @@ export const InvoiceManagement: React.FC = () => {
                       ))}
                       {invoice.items.length > 3 && (
                         <div className="flex items-center justify-center p-3 bg-slate-600 rounded-lg">
-                          <p className="text-gray-400">+{invoice.items.length - 3} more item{invoice.items.length - 3 !== 1 ? 's' : ''}</p>
+                          <p className="text-gray-400 text-sm">+{invoice.items.length - 3} more item{invoice.items.length - 3 !== 1 ? 's' : ''}</p>
                         </div>
                       )}
                     </div>
@@ -469,14 +470,16 @@ export const InvoiceManagement: React.FC = () => {
 
                   {/* Payment Terms */}
                   <div className="mt-4 pt-4 border-t border-slate-600">
-                    <p className="text-sm text-gray-400">
-                      <span className="font-medium">Payment Terms:</span> {invoice.paymentTerms}
-                    </p>
-                    {invoice.notes && (
-                      <p className="text-sm text-gray-400 mt-1">
-                        <span className="font-medium">Notes:</span> {invoice.notes}
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-400">
+                        <span className="font-medium">Payment Terms:</span> {invoice.paymentTerms}
                       </p>
-                    )}
+                      {invoice.notes && (
+                        <p className="text-sm text-gray-400">
+                          <span className="font-medium">Notes:</span> {invoice.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

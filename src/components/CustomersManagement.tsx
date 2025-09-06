@@ -15,7 +15,7 @@ import {
   Star,
   Clock
 } from 'lucide-react';
-import { Customer, Sale } from '../types';
+import { Customer, Sale } from '../types/index';
 import { getSalesData } from '../data/salesData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CustomerProfileModal } from './CustomerProfileModal';
@@ -394,8 +394,8 @@ export const CustomersManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Customer Management</h1>
-          <p className="text-gray-400 mt-2">View and manage customer profiles and purchase history</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Customer Management</h1>
+          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">View and manage customer profiles and purchase history</p>
         </div>
         {/* <button
           onClick={() => setShowCreateOrder(true)}
@@ -407,71 +407,71 @@ export const CustomersManagement: React.FC = () => {
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Total Customers</p>
-              <p className="text-2xl font-bold text-white mt-2">{totalCustomers}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-400">Total Customers</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-1 sm:mt-2">{totalCustomers}</p>
             </div>
-            <User size={32} className="text-blue-400" />
+            <User size={24} className="text-blue-400 sm:w-8 sm:h-8" />
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Total Revenue</p>
-              <p className="text-2xl font-bold text-white mt-2">{formatCurrency(totalRevenue)}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-400">Total Revenue</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-1 sm:mt-2">{formatCurrency(totalRevenue)}</p>
             </div>
-            <DollarSign size={32} className="text-green-400" />
+            <DollarSign size={24} className="text-green-400 sm:w-8 sm:h-8" />
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Avg Spending</p>
-              <p className="text-2xl font-bold text-white mt-2">{formatCurrency(averageSpending)}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-400">Avg Spending</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-1 sm:mt-2">{formatCurrency(averageSpending)}</p>
             </div>
-            <TrendingUp size={32} className="text-purple-400" />
+            <TrendingUp size={24} className="text-purple-400 sm:w-8 sm:h-8" />
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Active (30d)</p>
-              <p className="text-2xl font-bold text-white mt-2">{activeCustomers}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-400">Active (30d)</p>
+              <p className="text-lg sm:text-2xl font-bold text-white mt-1 sm:mt-2">{activeCustomers}</p>
             </div>
-            <Clock size={32} className="text-orange-400" />
+            <Clock size={24} className="text-orange-400 sm:w-8 sm:h-8" />
           </div>
         </div>
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="relative flex-1">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Search customers by name, email, or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-8 sm:pl-10 pr-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <div className="relative">
-              <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <select
                 value={filterBy}
                 onChange={(e) => setFilterBy(e.target.value as any)}
-                className="pl-10 pr-8 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[160px]"
+                className="pl-8 sm:pl-10 pr-6 sm:pr-8 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[120px] sm:min-w-[160px]"
               >
                 <option value="all">All Customers</option>
                 <option value="high_value">High Value (5K+)</option>
@@ -483,7 +483,7 @@ export const CustomersManagement: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[140px]"
+              className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
             >
               <option value="totalSpent">Sort by Spending</option>
               <option value="totalOrders">Sort by Orders</option>
@@ -493,7 +493,7 @@ export const CustomersManagement: React.FC = () => {
 
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white hover:bg-slate-600 transition-colors"
+              className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white hover:bg-slate-600 transition-colors"
               title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
             >
               {sortOrder === 'desc' ? '↓' : '↑'}
@@ -503,7 +503,7 @@ export const CustomersManagement: React.FC = () => {
       </div>
 
       {/* Customer Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {filteredCustomers.map((customer) => {
           const customerTier = getCustomerTier(customer);
           const daysSinceLastOrder = getDaysSinceLastOrder(customer.lastOrderDate);
@@ -511,18 +511,18 @@ export const CustomersManagement: React.FC = () => {
 
           return (
             <div key={customer.id} className="bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* Customer Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                      <User size={24} className="text-white" />
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User size={20} className="text-white sm:w-6 sm:h-6" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-lg">{customer.name}</h3>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-white text-base sm:text-lg truncate">{customer.name}</h3>
                       <div className="flex items-center gap-2">
-                        <TierIcon size={14} className={customerTier.color} />
-                        <span className={`text-sm ${customerTier.color}`}>
+                        <TierIcon size={12} className={`${customerTier.color} sm:w-[14px] sm:h-[14px]`} />
+                        <span className={`text-xs sm:text-sm ${customerTier.color}`}>
                           {customerTier.tier} Customer
                         </span>
                       </div>
@@ -530,48 +530,48 @@ export const CustomersManagement: React.FC = () => {
                   </div>
                   <button
                     onClick={() => handleViewProfile(customer)}
-                    className="p-2 text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded-lg transition-colors"
+                    className="p-2 text-blue-400 hover:text-blue-300 hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
                     title="View Profile"
                   >
-                    <Eye size={18} />
+                    <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </button>
                 </div>
 
                 {/* Contact Information */}
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail size={14} className="text-gray-400" />
-                    <span className="text-gray-300 truncate">{customer.email}</span>
+                    <Mail size={12} className="text-gray-400 sm:w-[14px] sm:h-[14px] flex-shrink-0" />
+                    <span className="text-gray-300 truncate text-xs sm:text-sm">{customer.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone size={14} className="text-gray-400" />
-                    <span className="text-gray-300">{customer.phone}</span>
+                    <Phone size={12} className="text-gray-400 sm:w-[14px] sm:h-[14px] flex-shrink-0" />
+                    <span className="text-gray-300 text-xs sm:text-sm">{customer.phone}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar size={14} className="text-gray-400" />
-                    <span className="text-gray-300">
+                    <Calendar size={12} className="text-gray-400 sm:w-[14px] sm:h-[14px] flex-shrink-0" />
+                    <span className="text-gray-300 text-xs sm:text-sm">
                       Customer since {formatDate(customer.createdAt)}
                     </span>
                   </div>
                 </div>
 
                 {/* Purchase Statistics */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div className="bg-slate-700 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <DollarSign size={16} className="text-green-400" />
+                      <DollarSign size={14} className="text-green-400 sm:w-4 sm:h-4" />
                       <span className="text-xs text-gray-400">Total Spent</span>
                     </div>
-                    <p className="text-lg font-semibold text-green-400">
+                    <p className="text-sm sm:text-lg font-semibold text-green-400">
                       {formatCurrency(customer.totalSpent)}
                     </p>
                   </div>
                   <div className="bg-slate-700 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <ShoppingCart size={16} className="text-blue-400" />
+                      <ShoppingCart size={14} className="text-blue-400 sm:w-4 sm:h-4" />
                       <span className="text-xs text-gray-400">Total Orders</span>
                     </div>
-                    <p className="text-lg font-semibold text-blue-400">
+                    <p className="text-sm sm:text-lg font-semibold text-blue-400">
                       {customer.totalOrders}
                     </p>
                   </div>
@@ -580,7 +580,7 @@ export const CustomersManagement: React.FC = () => {
                 {/* Last Order Info */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock size={14} className="text-gray-400" />
+                    <Clock size={12} className="text-gray-400 sm:w-[14px] sm:h-[14px]" />
                     <span className="text-xs text-gray-400">Last Order</span>
                   </div>
                   {customer.lastOrderDate ? (
@@ -607,12 +607,12 @@ export const CustomersManagement: React.FC = () => {
                 {customer.preferredProducts && customer.preferredProducts.length > 0 && (
                   <div className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Package size={14} className="text-gray-400" />
+                      <Package size={12} className="text-gray-400 sm:w-[14px] sm:h-[14px]" />
                       <span className="text-xs text-gray-400">Preferred Products</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {customer.preferredProducts.slice(0, 2).map((product, index) => (
-                        <span key={index} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded">
+                        <span key={index} className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded truncate">
                           {product}
                         </span>
                       ))}
@@ -628,7 +628,7 @@ export const CustomersManagement: React.FC = () => {
                 {/* Action Button */}
                 <button
                   onClick={() => handleViewProfile(customer)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors font-medium"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm sm:text-base"
                 >
                   View Full Profile
                 </button>
@@ -639,12 +639,12 @@ export const CustomersManagement: React.FC = () => {
       </div>
 
       {filteredCustomers.length === 0 && (
-        <div className="text-center py-12">
-          <div className="bg-slate-800 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-            <User size={32} className="text-gray-400" />
+        <div className="text-center py-8 sm:py-12">
+          <div className="bg-slate-800 rounded-full p-4 sm:p-6 w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 flex items-center justify-center">
+            <User size={24} className="text-gray-400 sm:w-8 sm:h-8" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No customers found</h3>
-          <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+          <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No customers found</h3>
+          <p className="text-gray-400 text-sm sm:text-base">Try adjusting your search or filter criteria</p>
         </div>
       )}
 
