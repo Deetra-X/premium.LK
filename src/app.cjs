@@ -22,6 +22,7 @@ const categoriesRouter = require('./routes/Categories');
 const accountsRouter = require('./routes/Accounts');
 const customersRouter = require('./routes/Customers');
 const dashboardRouter = require('./routes/Dashboard');
+const invoicesRouter = require('./routes/Invoices');
 // Import router for account orders
 const accountOrdersRouter = require('../backend/routes/accountOrders');
 // Import backend sales router
@@ -32,7 +33,7 @@ app.get('/api-status', (req, res) => {
   console.log('API status endpoint accessed');
   res.json({
     status: 'API is running',
-    routes: ['/api/categories', '/api/accounts', '/api/customers', '/api/dashboard', '/api/sales', '/api/account-orders'],
+    routes: ['/api/categories', '/api/accounts', '/api/customers', '/api/dashboard', '/api/invoices', '/api/sales', '/api/account-orders'],
     message: 'All endpoints should be available'
   });
 });
@@ -48,6 +49,7 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/invoices', invoicesRouter);
 
 // Add sales router
 console.log('Adding sales router at /api/sales path');

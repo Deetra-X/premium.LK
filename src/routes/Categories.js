@@ -3,31 +3,17 @@ const router = express.Router();
 const db = require('../db');
 const CategoryMaintenance = require('../utils/database-maintenance');
 
-/*    // Parse service_types safely
-    let parsedServiceTypes = [];
-    try {
-      if (createdCategory[0].service_types) {
-        // Check if it's a simple string like 'other' before trying to parse
-        if (typeof createdCategory[0].service_types === 'string') {
-          // Check if it looks like a JSON array
-          if (createdCategory[0].service_types.trim().startsWith('[') && 
-              createdCategory[0].service_types.trim().endsWith(']')) {
-            parsedServiceTypes = JSON.parse(createdCategory[0].service_types);
-          } else {
-            // Handle simple strings directly
-            parsedServiceTypes = [createdCategory[0].service_types];
-          }
-        } else {
-          parsedServiceTypes = createdCategory[0].service_types;
-        }
-      }
-    } catch (parseError) {
-      console.warn(`⚠️ Failed to parse service_types for new category:`, parseError);
-      // If it's a simple string, use it as a single element array
-      parsedServiceTypes = [String(createdCategory[0].service_types || 'other')];
-    }/categories
- * Fetches all product categories from the database
- * Returns array of category objects with id, name, description, icon, color, service_types, created_at, is_active
+// Startup marker to confirm this version is loaded
+console.log('🔥 Categories route loaded - HARD DELETE ONLY VERSION');
+
+/*
+ Legacy (now unused) helper snippet that tried to parse service_types for a freshly
+ created category. Kept here for reference but not executed.
+*/
+/******************* CATEGORY ROUTES ********************/
+/**
+ * Fetches all product categories from the database.
+ * Returns array of category objects with id, name, description, icon, color, service_types, created_at, is_active.
  */
 router.get('/', async (req, res) => {
   try {
@@ -382,14 +368,13 @@ router.put('/:id', async (req, res) => {
 
 /**
  * DELETE /api/categories/:id
- * Soft deletes a product category (sets is_active = 0)
- * Returns success confirmation
+ * PERMANENTLY deletes a category from the database (hard delete only).
+ * Guards against deletion if category is referenced by active accounts.
  */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    console.log(`🗑️ Attempting to delete category ${id}`);
+    console.log(`🗑️ PERMANENTLY deleting category ${id}`);
     
     // Check if category exists
     const [existingCategory] = await db.query('SELECT id, name FROM product_categories WHERE id = ?', [id]);
@@ -402,7 +387,7 @@ router.delete('/:id', async (req, res) => {
     }
     
     const categoryName = existingCategory[0].name;
-    console.log(`📋 Found category to delete: ${categoryName}`);
+    console.log(`📋 Found category to permanently delete: ${categoryName}`);
     
     // Check if category is being used by any accounts
     const [accountsUsingCategory] = await db.query(
@@ -418,26 +403,25 @@ router.delete('/:id', async (req, res) => {
         accountsCount: accountsUsingCategory[0].count
       });
     }
-    
-    // Perform soft delete (set is_active = 0)
-    const deleteResult = await db.query('UPDATE product_categories SET is_active = 0 WHERE id = ?', [id]);
-    
-    console.log('✅ Delete result:', deleteResult);
+
+    // Permanent delete only
+    const deleteResult = await db.query('DELETE FROM product_categories WHERE id = ?', [id]);
+    console.log('✅ PERMANENT delete result:', deleteResult);
     
     if (deleteResult[0].affectedRows === 0) {
-      console.log(`❌ No rows affected when deleting category ${id}`);
       return res.status(500).json({
         error: 'Category deletion failed - no rows affected',
         code: 'DELETE_NO_EFFECT'
       });
     }
     
-    console.log(`✅ Category "${categoryName}" soft deleted successfully`);
-    res.json({ 
-      success: true, 
-      message: `Category "${categoryName}" deleted successfully`,
+    console.log(`✅ Category "${categoryName}" PERMANENTLY deleted from database`);
+    return res.json({
+      success: true,
+      message: `Category "${categoryName}" permanently deleted`,
       deletedId: id,
-      deletedName: categoryName
+      deletedName: categoryName,
+      code: 'CATEGORY_PERMANENTLY_DELETED'
     });
   } catch (err) {
     console.error('❌ Error deleting category:', err);

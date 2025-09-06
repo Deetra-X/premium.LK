@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -17,13 +17,14 @@ import {
   XCircle
 } from 'lucide-react';
 import { Invoice } from '../types';
-import { getInvoices } from '../data/invoiceData';
+import { getInvoices, updateInvoiceStatus } from '../data/invoiceData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CreateInvoiceModal } from './CreateInvoiceModal';
 import { InvoiceModal } from './InvoiceModal';
 
 export const InvoiceManagement: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>(getInvoices());
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'>('all');
   const [filterCustomerType, setFilterCustomerType] = useState<'all' | 'standard' | 'reseller'>('all');
@@ -31,16 +32,48 @@ export const InvoiceManagement: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
+  // Load invoices on component mount
+  useEffect(() => {
+    loadInvoices();
+  }, []);
+
+  const loadInvoices = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Loading invoices...');
+      const invoicesData = await getInvoices();
+      
+      // Ensure we have a valid array and each invoice has required properties
+      const validInvoices = (invoicesData || []).filter(invoice => 
+        invoice && 
+        invoice.id && 
+        invoice.invoiceNumber && 
+        invoice.customerInfo &&
+        typeof invoice.customerInfo === 'object'
+      );
+      
+      setInvoices(validInvoices);
+      console.log(`✅ Loaded ${validInvoices.length} valid invoices`);
+    } catch (error) {
+      console.error('❌ Error loading invoices:', error);
+      setInvoices([]); // Set empty array on error
+      alert('❌ Failed to load invoices. Please refresh the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredInvoices = invoices.filter(invoice => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customerInfo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customerInfo.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (invoice.customerInfo.customerType === 'reseller' && 
-       invoice.customerInfo.resellerInfo?.resellerId.toLowerCase().includes(searchTerm.toLowerCase()));
+      (invoice.invoiceNumber || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.customerType === 'reseller' && 
+       (invoice.customerInfo?.resellerInfo?.resellerId || '').toLowerCase().includes(searchLower));
     
     const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
-    const matchesCustomerType = filterCustomerType === 'all' || invoice.customerInfo.customerType === filterCustomerType;
+    const matchesCustomerType = filterCustomerType === 'all' || invoice.customerInfo?.customerType === filterCustomerType;
     
     return matchesSearch && matchesStatus && matchesCustomerType;
   });
@@ -75,18 +108,48 @@ export const InvoiceManagement: React.FC = () => {
     }
   };
 
-  const handleCreateInvoice = (invoice: Invoice) => {
-    setInvoices(prev => [invoice, ...prev]);
+  const handleCreateInvoice = async (invoice: Invoice) => {
+    try {
+      console.log(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
+      
+      // Add the new invoice to the list and reload to get latest data
+      setInvoices(prev => [invoice, ...prev]);
+      
+      // Show success message
+      alert(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
+      
+      // Optionally reload to ensure consistency with database
+      await loadInvoices();
+    } catch (error) {
+      console.error('❌ Error handling created invoice:', error);
+      alert('❌ Error occurred while processing the invoice.');
+    }
   };
 
-  const handleUpdateInvoiceStatus = (invoiceId: string, status: Invoice['status']) => {
-    setInvoices(prev => 
-      prev.map(invoice => 
-        invoice.id === invoiceId 
-          ? { ...invoice, status, updatedAt: new Date() }
-          : invoice
-      )
-    );
+  const handleUpdateInvoiceStatus = async (invoiceId: string, status: Invoice['status']) => {
+    try {
+      console.log(`🔄 Updating invoice ${invoiceId} status to ${status}...`);
+      
+      // Optimistically update UI
+      setInvoices(prev => 
+        prev.map(invoice => 
+          invoice.id === invoiceId 
+            ? { ...invoice, status, updatedAt: new Date() }
+            : invoice
+        )
+      );
+      
+      // Update via API (invoiceId is actually the invoice number)
+      await updateInvoiceStatus(invoiceId, status);
+      console.log(`✅ Successfully updated invoice ${invoiceId} status`);
+      
+      // Reload data to ensure consistency
+      await loadInvoices();
+    } catch (error) {
+      console.error(`❌ Error updating invoice status:`, error);
+      // Revert optimistic update on error
+      await loadInvoices();
+    }
   };
 
   const handleViewInvoice = (invoice: Invoice) => {
@@ -100,7 +163,18 @@ export const InvoiceManagement: React.FC = () => {
   const paidAmount = invoices.filter(inv => inv.status === 'paid').reduce((sum, invoice) => sum + invoice.totalAmount, 0);
   const pendingAmount = invoices.filter(inv => inv.status === 'sent').reduce((sum, invoice) => sum + invoice.totalAmount, 0);
   const overdueCount = invoices.filter(inv => inv.status === 'overdue' || (inv.status !== 'paid' && new Date() > inv.dueDate)).length;
-  const resellerInvoices = invoices.filter(inv => inv.customerInfo.customerType === 'reseller').length;
+  const resellerInvoices = invoices.filter(inv => inv.customerInfo?.customerType === 'reseller').length;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-white text-lg">Loading invoices...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

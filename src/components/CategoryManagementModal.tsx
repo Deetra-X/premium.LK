@@ -453,7 +453,8 @@ export const CategoryManagementModal: React.FC<CategoryManagementModalProps> = (
     removeToast(confirmToastId);
     
     try {
-      console.log('🗑️ Deleting category:', categoryId, categoryName);
+      console.log('🗑️ Deleting category (HARD):', categoryId, categoryName);
+      // Hard delete is default; pass { soft: true } to soft delete if needed in future
       await deleteCategory(categoryId);
       
       // Remove from local state immediately

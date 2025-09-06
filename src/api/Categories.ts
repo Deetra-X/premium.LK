@@ -122,14 +122,30 @@ export async function updateCategory(id: string, data: CategoryCreateRequest) {
   }
 }
 
+// Delete a category permanently from database (hard delete only)
 export async function deleteCategory(id: string) {
   try {
-    console.log('🗑️ Deleting category:', id);
+    console.log(`🗑️ PERMANENTLY deleting category: ${id}`);
     const res = await fetch(`${API_BASE_URL}/api/categories/${id}`, { 
       method: 'DELETE' 
     });
     
-    const responseData = await res.json();
+    // Safely parse JSON response
+    interface DeleteResponse {
+      success?: boolean;
+      message?: string;
+      deletedId?: string;
+      deletedName?: string;
+      code?: string;
+      error?: string;
+    }
+    let responseData: DeleteResponse = {};
+    try {
+      const text = await res.text();
+      responseData = text ? JSON.parse(text) : {};
+    } catch (parseErr) {
+      console.warn('⚠️ Failed to parse delete response JSON:', parseErr);
+    }
     
     if (!res.ok) {
       console.error('❌ Category deletion failed:', responseData);
@@ -144,7 +160,7 @@ export async function deleteCategory(id: string) {
       }
     }
     
-    console.log('✅ Category deleted successfully:', responseData);
+    console.log('✅ Category PERMANENTLY deleted:', responseData);
     return responseData;
   } catch (error) {
     console.error('🚨 Error deleting category:', error);
