@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Invoice, Customer, Sale } from '../types';
+import { Invoice, Customer, Sale } from '../types/index';
 import { createInvoiceFromSale } from '../data/invoiceData';
 import { getSalesData } from '../data/salesData';
 import { formatCurrency } from '../utils/dateUtils';
@@ -8,7 +8,6 @@ import {
   Save,
   User,
   Building,
-  Calculator,
   FileText,
   Search
 } from 'lucide-react';
@@ -39,6 +38,13 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     phone: '',
     taxId: '',
     customerType: 'standard' as 'standard' | 'reseller',
+    billingAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: ''
+    },
     resellerInfo: {
       resellerId: '',
       discountRate: 20, // Default reseller discount
@@ -141,6 +147,15 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         name: '',
         email: '',
         phone: '',
+        taxId: '',
+        customerType: 'standard',
+        billingAddress: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: ''
+        },
         subscriptionDetails: {
         productName: '',
         discountRate: 0,
@@ -148,8 +163,6 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
         startDate: '',
         endDate: ''
   },
-        taxId: '',
-        customerType: 'standard',
         resellerInfo: {
           resellerId: '',
           discountRate: 10,
@@ -170,12 +183,22 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     if (type === 'reseller') {
       setPaymentTerms('Net 45 days - Authorized Reseller Terms');
       // Auto-generate reseller ID if not present
-      if (!customerInfo.resellerInfo.resellerId && selectedSale) {
+      if (!customerInfo.resellerInfo.resellerId && selectedSale && selectedSale.customerId) {
         setCustomerInfo(prev => ({
           ...prev,
           resellerInfo: {
             ...prev.resellerInfo,
-            resellerId: 'RSL-' + selectedSale.customerId.slice(-6).toUpperCase()
+            resellerId: 'RSL-' + selectedSale.customerId.toString().slice(-6).toUpperCase()
+          }
+        }));
+      } else if (!customerInfo.resellerInfo.resellerId && !selectedSale) {
+        // Generate a random reseller ID if no sale is selected
+        const randomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+        setCustomerInfo(prev => ({
+          ...prev,
+          resellerInfo: {
+            ...prev.resellerInfo,
+            resellerId: 'RSL-' + randomId
           }
         }));
       }
@@ -294,7 +317,7 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -302,7 +325,7 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     }
 
     try {
-      const invoice = createInvoiceFromSale(
+      const invoice = await createInvoiceFromSale(
         selectedSaleId,
         customerInfo,
         paymentTerms,

@@ -135,11 +135,10 @@ router.post('/', async (req, res) => {
     const [saleRows] = await db.query(`
       SELECT 
         s.*,
-        c.name as customer_name,
-        c.email as customer_email,
-        c.phone as customer_phone
+        s.customer_name,
+        s.customer_email,
+        s.customer_phone
       FROM sales s
-      LEFT JOIN customers c ON s.customer_id = c.id
       WHERE s.id = ?
     `, [saleId]);
     
@@ -152,16 +151,48 @@ router.post('/', async (req, res) => {
     
     const sale = saleRows[0];
     
-    // Fetch sale items
-    const [itemRows] = await db.query(`
-      SELECT 
-        si.*,
-        a.name as product_name,
-        a.description
-      FROM sale_items si
-      LEFT JOIN accounts a ON si.account_id = a.id
-      WHERE si.sale_id = ?
-    `, [saleId]);
+    // Parse items from the sales table JSON field
+    let saleItems = [];
+    if (sale.items) {
+      try {
+        // Parse items if stored as string
+        saleItems = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items;
+      } catch (err) {
+        console.error(`Error parsing items for sale ${saleId}:`, err);
+        saleItems = [];
+      }
+    }
+    
+    // For each item, we'll get additional product details from accounts table if needed
+    const itemRows = [];
+    for (const item of saleItems) {
+      let productInfo = {};
+      
+      try {
+        // Try to get product details from accounts table if it exists
+        const [accountRows] = await db.query(`
+          SELECT name as product_name, description 
+          FROM accounts 
+          WHERE id = ?
+        `, [item.productId || item.account_id || item.id]);
+        
+        productInfo = accountRows[0] || {};
+      } catch (err) {
+        // If accounts table doesn't exist or query fails, just log and continue
+        console.warn(`Could not fetch product details for item ${item.productId || item.id}: ${err.message}`);
+        productInfo = {};
+      }
+      
+      // Build the item row with fallbacks
+      itemRows.push({
+        ...item,
+        product_name: productInfo.product_name || item.productName || item.name || 'Unknown Product',
+        description: productInfo.description || item.description || '',
+        unit_price: item.price || item.unit_price || 0, // Map price to unit_price
+        quantity: item.quantity || 1,
+        id: item.id || item.productId || `item_${itemRows.length + 1}`
+      });
+    }
     
     // Generate invoice number
     const year = new Date().getFullYear();
