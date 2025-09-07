@@ -310,7 +310,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   };
 
   const handleCustomerTypeChange = (isExisting: boolean) => {
-    console.log('🔍 handleCustomerTypeChange called:', { isExisting, currentDiscountRate: customerInfo.discountRate });
     setCustomerInfo(prev => ({
       ...prev,
       isExisting,
@@ -319,8 +318,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       email: '',
       phone: '',
       customerType: 'standard', // Reset customer type to standard for new customers
-      // Don't reset discount rate - preserve user input
-      discountRate: prev.discountRate // Keep existing discount rate
+      discountRate: 0 // Reset discount rate
     }));
     setErrors({});
   };
@@ -332,13 +330,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       const discountRate = customer.customerType === 'reseller' && customer.resellerInfo 
         ? customer.resellerInfo.discountRate 
         : 0;
-        
-      console.log('🔍 handleExistingCustomerSelect called:', { 
-        customerId, 
-        customerType: customer.customerType, 
-        calculatedDiscountRate: discountRate,
-        currentDiscountRate: customerInfo.discountRate 
-      });
         
       setCustomerInfo(prev => ({
         ...prev,
@@ -353,14 +344,12 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   };
   // Add a new handler for customer type changes
   const handleCustomerTypeSelect = (type: 'standard' | 'reseller') => {
-    console.log('🔍 handleCustomerTypeSelect called:', { type, currentDiscountRate: customerInfo.discountRate });
     setCustomerInfo(prev => ({
       ...prev,
       customerType: type,
-      // Only set default discount rate if current rate is 0 (not manually entered)
-      discountRate: type === 'reseller' && prev.discountRate === 0 ? 10 : prev.discountRate
+      // Set default discount rate based on type
+      discountRate: type === 'reseller' ? 10 : prev.discountRate
     }));
-    console.log('🔍 After handleCustomerTypeSelect, new discount rate should be:', type === 'reseller' && customerInfo.discountRate === 0 ? 10 : customerInfo.discountRate);
   };
 
   const handleAccountSelect = (accountId: string) => {
@@ -487,9 +476,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
      console.log('Final Order Data being sent:', orderData );
     console.log('Customer Type in payload:' , orderData.customerType);
     console.log('Days until renewal:', orderData.daysUntilRenewal);
-    console.log('🔍 DEBUG - customerInfo.discountRate:', customerInfo.discountRate);
-    console.log('🔍 DEBUG - orderData.discountRate:', orderData.discountRate);
-    console.log('🔍 DEBUG - Full customerInfo object:', customerInfo);
+    console.log({discountRate: customerInfo.discountRate});
     console.log("Sending order data to backend:", JSON.stringify(orderData, null, 2));
 
 
@@ -1022,18 +1009,10 @@ onClose();
                 min="0"
                 max="100"
                 value={customerInfo.discountRate}
-                onChange={(e) => {
-                  const newDiscountRate = Math.min(100, Math.max(0, Number(e.target.value) || 0));
-                  console.log('🔍 DISCOUNT INPUT CHANGE:', {
-                    inputValue: e.target.value,
-                    newDiscountRate: newDiscountRate,
-                    currentDiscountRate: customerInfo.discountRate
-                  });
-                  setCustomerInfo(prev => ({
-                    ...prev,
-                    discountRate: newDiscountRate
-                  }));
-                }}
+                onChange={(e) => setCustomerInfo(prev => ({
+                  ...prev,
+                  discountRate: Math.min(100, Math.max(0, Number(e.target.value) || 0))
+                }))}
                 className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               <p className="text-sm text-gray-400 mt-1">

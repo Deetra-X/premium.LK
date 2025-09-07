@@ -134,8 +134,12 @@ router.post('/', async (req, res) => {
     // Fetch sale data
     const [saleRows] = await db.query(`
       SELECT 
-        s.*
+        s.*,
+        c.name as customer_name,
+        c.email as customer_email,
+        c.phone as customer_phone
       FROM sales s
+      LEFT JOIN customers c ON s.customer_id = c.id
       WHERE s.id = ?
     `, [saleId]);
     
@@ -147,34 +151,17 @@ router.post('/', async (req, res) => {
     }
     
     const sale = saleRows[0];
-    console.log('📊 Found sale:', sale);
     
-    // Parse items from JSON if it exists
-    let saleItems = [];
-    try {
-      if (sale.items) {
-        saleItems = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items;
-      } else {
-        // If no items JSON, create from single product data
-        saleItems = [{
-          productId: sale.id.toString(),
-          productName: sale.product_name || 'Product',
-          price: parseFloat(sale.total_amount) || 0,
-          quantity: sale.quantity || 1
-        }];
-      }
-    } catch (parseError) {
-      console.error('Error parsing sale items:', parseError);
-      // Fallback to basic item structure
-      saleItems = [{
-        productId: sale.id.toString(),
-        productName: sale.product_name || 'Product',
-        price: parseFloat(sale.total_amount) || 0,
-        quantity: sale.quantity || 1
-      }];
-    }
-    
-    console.log('📦 Sale items:', saleItems);
+    // Fetch sale items
+    const [itemRows] = await db.query(`
+      SELECT 
+        si.*,
+        a.name as product_name,
+        a.description
+      FROM sale_items si
+      LEFT JOIN accounts a ON si.account_id = a.id
+      WHERE si.sale_id = ?
+    `, [saleId]);
     
     // Generate invoice number
     const year = new Date().getFullYear();
@@ -188,67 +175,18 @@ router.post('/', async (req, res) => {
     // Calculate amounts
     let subtotal = 0;
     let discountAmount = 0;
-    let discountRate = 0; // Declare discountRate at function scope
-    let numberOfItems = saleItems.length;
+    let numberOfItems = itemRows.length;
     
     // Calculate subtotal from sale items
-    for (const item of saleItems) {
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
+    for (const item of itemRows) {
+      const itemTotal = item.unit_price * item.quantity;
       subtotal += itemTotal;
     }
     
-    // If subtotal is 0, use the total_amount from sales table and reverse-calculate subtotal
-    if (subtotal === 0) {
-      numberOfItems = sale.quantity || 1;
-      // Use the stored discount_amount from sales table if available
-      if (sale.discount_amount && parseFloat(sale.discount_amount) > 0) {
-        discountAmount = parseFloat(sale.discount_amount);
-        subtotal = parseFloat(sale.total_amount) + discountAmount; // Reverse-calculate original subtotal
-        console.log('📊 Using stored discount from sales table:', {
-          discountAmount,
-          totalAmount: sale.total_amount,
-          calculatedSubtotal: subtotal
-        });
-      } else {
-        subtotal = parseFloat(sale.total_amount) || 0;
-        console.log('📊 No stored discount found, using total as subtotal');
-      }
-    } else {
-      // We calculated subtotal from items, now use stored discount amount if available
-      if (sale.discount_amount && parseFloat(sale.discount_amount) > 0) {
-        discountAmount = parseFloat(sale.discount_amount);
-        console.log('📊 Using stored discount amount from sales table:', discountAmount);
-      } else {
-        // Fallback to calculating discount if not stored
-        
-        // Check for discount rate from multiple sources
-        if (customerInfo.customerType === 'reseller' && customerInfo.resellerInfo && customerInfo.resellerInfo.discountRate) {
-          discountRate = customerInfo.resellerInfo.discountRate;
-          console.log('📊 Using reseller discount from customerInfo:', discountRate + '%');
-        } else if (sale.discount_rate && parseFloat(sale.discount_rate) > 0) {
-          discountRate = parseFloat(sale.discount_rate);
-          console.log('📊 Using discount from sale data:', discountRate + '%');
-        } else if (sale.customer_type === 'reseller' && customerInfo.resellerInfo && customerInfo.resellerInfo.discountRate) {
-          discountRate = customerInfo.resellerInfo.discountRate;
-          console.log('📊 Using reseller discount for reseller customer type:', discountRate + '%');
-        } else if (sale.customer_type === 'reseller' && discountRate === 0) {
-          // 🔧 FALLBACK: Apply default reseller discount if none is set
-          discountRate = 15; // Default 15% discount for resellers
-          console.log('📊 Applying default reseller discount (15%) as fallback');
-        }
-        
-        // Apply discount if we have a rate
-        if (discountRate > 0) {
-          discountAmount = subtotal * (discountRate / 100);
-          console.log('💰 Calculated discount:', {
-            discountRate: discountRate + '%',
-            subtotal,
-            discountAmount
-          });
-        } else {
-          console.log('💰 No discount applied');
-        }
-      }
+    // Apply reseller discount if applicable
+    if (customerInfo.customerType === 'reseller' && customerInfo.resellerInfo) {
+      const discountRate = customerInfo.resellerInfo.discountRate || 0;
+      discountAmount = subtotal * (discountRate / 100);
     }
     
     const taxableAmount = subtotal - discountAmount;
@@ -258,23 +196,6 @@ router.post('/', async (req, res) => {
     // Calculate due date (30 days from now)
     const issueDate = new Date();
     const dueDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
-    // Use customer info from customerInfo parameter or fallback to sale data
-    const finalCustomerName = customerInfo.name || sale.customer_name;
-    const finalCustomerEmail = customerInfo.email || sale.customer_email;
-    const finalCustomerType = customerInfo.customerType || sale.customer_type || 'Standard';
-    
-    console.log('💰 Calculated amounts:', {
-      subtotal,
-      discountRate: discountRate + '%',
-      discountAmount,
-      taxAmount,
-      totalAmount,
-      numberOfItems,
-      saleDiscountRate: sale.discount_rate,
-      customerType: finalCustomerType,
-      resellerDiscountRate: customerInfo.resellerInfo?.discountRate
-    });
     
     // Insert invoice
     const insertResult = await db.query(`
@@ -298,18 +219,18 @@ router.post('/', async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       invoiceNumber,
-      finalCustomerName,
-      finalCustomerEmail,
-      finalCustomerType,
+      customerInfo.name,
+      customerInfo.email || sale.customer_email,
+      customerInfo.customerType || 'Standard',
       'draft',
       subtotal,
       discountAmount,
       taxAmount,
       totalAmount,
       numberOfItems,
-      sale.payment_method || 'cash',
+      sale.payment_method,
       paymentTerms,
-      customerInfo.customerType === 'reseller' && customerInfo.resellerInfo ? customerInfo.resellerInfo.resellerId : null,
+      customerInfo.customerType === 'reseller' ? customerInfo.resellerInfo?.resellerId : null,
       issueDate,
       dueDate,
       notes
@@ -496,69 +417,6 @@ router.get('/stats/summary', async (req, res) => {
       error: 'Failed to fetch invoice statistics', 
       details: err.message 
     });
-  }
-});
-
-/**
- * GET /api/invoices/debug/:saleId
- * Debug endpoint to check discount calculation for a sale
- */
-router.get('/debug/:saleId', async (req, res) => {
-  try {
-    const { saleId } = req.params;
-    
-    // Fetch sale data
-    const [saleRows] = await db.query(`
-      SELECT * FROM sales WHERE id = ?
-    `, [saleId]);
-    
-    if (saleRows.length === 0) {
-      return res.status(404).json({ error: 'Sale not found' });
-    }
-    
-    const sale = saleRows[0];
-    
-    // Parse items
-    let saleItems = [];
-    try {
-      if (sale.items) {
-        saleItems = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items;
-      }
-    } catch (e) {
-      saleItems = [];
-    }
-    
-    // Calculate subtotal
-    let subtotal = 0;
-    for (const item of saleItems) {
-      subtotal += (item.price || 0) * (item.quantity || 1);
-    }
-    if (subtotal === 0) {
-      subtotal = parseFloat(sale.total_amount) || 0;
-    }
-    
-    // Check discount
-    const saleDiscountRate = parseFloat(sale.discount_rate) || 0;
-    const calculatedDiscountAmount = subtotal * (saleDiscountRate / 100);
-    
-    res.json({
-      sale: {
-        id: sale.id,
-        customer_name: sale.customer_name,
-        customer_type: sale.customer_type,
-        discount_rate: sale.discount_rate,
-        total_amount: sale.total_amount
-      },
-      calculations: {
-        subtotal,
-        saleDiscountRate,
-        calculatedDiscountAmount,
-        saleItems
-      }
-    });
-  } catch (err) {
-    console.error('❌ Debug error:', err);
-    res.status(500).json({ error: err.message });
   }
 });
 

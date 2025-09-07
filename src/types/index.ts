@@ -168,7 +168,7 @@ export interface Sale {
    totalAmount: number; // Alias for compatibility
   payment_method: 'cash' | 'bank_transfer';
   paymentMethod: 'cash' | 'bank_transfer'; // Alias for compatibility
-  order_date: string | Date;
+  order_date(order_date: any): import("react").ReactNode;
   orderDate: Date; // Alias for compatibility
   status: 'pending' | 'completed' | 'cancelled';
   notes: string;
