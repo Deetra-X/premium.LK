@@ -672,9 +672,9 @@ export const RemindersManagement: React.FC = () => {
               {criticalAccountRenewals + criticalSalesRenewals} Critical
             </span>
           </div>
-          <button className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
+          {/* <button className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
             <Settings size={20} />
-          </button>
+          </button> setting button eka podd ain kala */}
         </div>
       </div>
 
