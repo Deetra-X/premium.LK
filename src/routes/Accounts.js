@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+// Helper to format a JS date or date-like value to 'YYYY-MM-DD' for MySQL DATE columns
+function toSqlDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * GET /api/accounts
  * Fetches all accounts with optional filtering
@@ -170,6 +178,7 @@ router.post('/', async (req, res) => {
       product_name,
       label,
       email,
+      renewal_status,
       cost,
       description,
       service_type,
@@ -182,6 +191,7 @@ router.post('/', async (req, res) => {
       current_users,
       cost_per_additional_user,
       is_shared_account,
+      is_active,
       family_features,
       usage_restrictions,
       primary_holder_name,
@@ -206,7 +216,23 @@ router.post('/', async (req, res) => {
       const diffTime = renewalDateObj - now;
       days_until_renewal = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
+    // Ensure proper SQL DATE string (YYYY-MM-DD)
+    const renewal_date_sql = toSqlDate(renewal_date);
     
+    // Derive a non-null email to satisfy NOT NULL constraint on accounts.email
+    const emailValue = (typeof email === 'string' && email.trim() !== '')
+      ? email.trim()
+      : (typeof primary_holder_email === 'string' && primary_holder_email.trim() !== '')
+        ? primary_holder_email.trim()
+        : `${accountId}@no-email.local`;
+
+    // Validate and normalize renewal status
+    const allowedStatuses = ['renewable', 'non-renewable', 'expired'];
+    const renewalStatusValue = allowedStatuses.includes(renewal_status) ? renewal_status : 'renewable';
+
+    // Determine active flag (default true)
+    const isActiveValue = typeof is_active === 'boolean' ? is_active : true;
+
     await db.query(`
       INSERT INTO accounts (
         id, product_name, label, email, renewal_status, days_until_renewal, cost, 
@@ -219,17 +245,17 @@ router.post('/', async (req, res) => {
       accountId,
       product_name,
       label || null,
-      email || null,
-      'renewable', // default status
+      emailValue,
+      renewalStatusValue,
       days_until_renewal,
       cost,
       description || null,
       now,
       now,
-      true, // is_active default true
+      isActiveValue,
       service_type,
       subscription_type,
-      renewal_date || null,
+      renewal_date_sql,
       category_id || null,
       brand || null,
       max_user_slots || null,
@@ -305,6 +331,8 @@ router.put('/:id', async (req, res) => {
         fieldsToUpdate.push(`${field} = ?`);
         if (field === 'family_features' || field === 'usage_restrictions') {
           values.push(Array.isArray(updateFields[field]) ? JSON.stringify(updateFields[field]) : updateFields[field]);
+        } else if (field === 'renewal_date') {
+          values.push(toSqlDate(updateFields[field]));
         } else {
           values.push(updateFields[field]);
         }

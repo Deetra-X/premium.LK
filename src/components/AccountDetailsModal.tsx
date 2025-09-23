@@ -1,52 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, Crown, Shield, User, Calendar, DollarSign, Users, Eye, EyeOff, 
-  CheckCircle, XCircle, AlertCircle, Clock, Zap 
-} from 'lucide-react';
-import { Account, UserSlot } from '../types/index';
-import { formatCurrency, formatDate } from '../utils/dateUtils';
+import { X } from 'lucide-react';
+import { Account } from '../types/index';
 
 interface AccountDetailsModalProps {
-  accountEmail: string;
+  accountId: string;
   onClose: () => void;
 }
 
 /**
  * AccountDetailsModal fetches and displays detailed info about an account.
  */
-export const AccountDetailsModal: React.FC<AccountDetailsModalProps> = ({ accountEmail, onClose }) => {
+export const AccountDetailsModal: React.FC<AccountDetailsModalProps> = ({ accountId, onClose }) => {
   const [account, setAccount] = useState<Account | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'features'>('overview');
-  const [showEmails, setShowEmails] = useState<{ [key: string]: boolean }>({});
+  const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
+  // Placeholder for future per-user email visibility state
+  // const [showEmails, setShowEmails] = useState<{ [key: string]: boolean }>({});
 
   // Fetch account details when component mounts or accountId changes
   useEffect(() => {
     async function fetchAccount() {
-      // Fetch full account details, including users and features
-      const res = await fetch(`/api/accounts/${accountEmail}`);
+      // Fetch full account details by ID; use API base for dev server
+      const res = await fetch(`http://localhost:3001/api/accounts/${accountId}`);
       if (res.ok) {
-        const data: Account = await res.json();
-        setAccount(data);
+        const db = await res.json();
+        // Map DB snake_case to frontend Account shape
+        const mapped: Account = {
+          id: db.id,
+          productName: db.product_name,
+          label: db.label,
+          email: db.email,
+          renewalStatus: db.renewal_status,
+          daysUntilRenewal: db.days_until_renewal ?? undefined,
+          cost: db.cost,
+          description: db.description || '',
+          createdAt: db.created_at ? new Date(db.created_at) : new Date(),
+          updatedAt: db.updated_at ? new Date(db.updated_at) : new Date(),
+          isActive: !!db.is_active,
+          serviceType: db.service_type,
+          subscriptionType: db.subscription_type,
+          renewalDate: db.renewal_date ? new Date(db.renewal_date) : new Date(),
+          categoryId: db.category_id || undefined,
+          brand: db.brand || undefined,
+          maxUserSlots: db.max_user_slots || 1,
+          availableSlots: db.available_slots ?? Math.max(0, (db.max_user_slots || 1) - (db.current_users || 0)),
+          currentUsers: db.current_users || 0,
+          costPerAdditionalUser: db.cost_per_additional_user ?? undefined,
+          isSharedAccount: !!db.is_shared_account,
+          familyFeatures: Array.isArray(db.family_features) ? db.family_features : (db.family_features ? JSON.parse(db.family_features) : []),
+          usageRestrictions: Array.isArray(db.usage_restrictions) ? db.usage_restrictions : (db.usage_restrictions ? JSON.parse(db.usage_restrictions) : []),
+          primaryHolder: {
+            name: db.primary_holder_name || '',
+            email: db.primary_holder_email || '',
+            phone: db.primary_holder_phone || undefined,
+          },
+          userSlots: [],
+        };
+        setAccount(mapped);
       } else {
         // handle error
       }
     }
     fetchAccount();
-  }, [accountEmail]);
+  }, [accountId]);
 
   // Toggle masked email visibility per user
-  const toggleEmailVisibility = (userId: string) => {
-    setShowEmails(prev => ({ ...prev, [userId]: !prev[userId] }));
-  };
-
-  const maskEmail = (email: string) => {
-    const [username, domain] = email.split('@');
-    if (username.length <= 2) {
-      return username.length === 1 ? `*@${domain}` : `${username[0]}*@${domain}`;
-    }
-    const maskedUsername = username.substring(0, 2) + '*'.repeat(username.length - 2);
-    return `${maskedUsername}@${domain}`;
-  };
+  // const toggleEmailVisibility = (userId: string) => {
+  //   setShowEmails(prev => ({ ...prev, [userId]: !prev[userId] }));
+  // };
+  // const maskEmail = (email?: string | null) => {
+  //   if (!email || typeof email !== 'string') return 'No email';
+  //   const trimmed = email.trim();
+  //   if (!trimmed || !trimmed.includes('@')) return 'No email';
+  //   const [username, domain] = trimmed.split('@');
+  //   if (!username || !domain) return 'No email';
+  //   if (username.length <= 2) {
+  //     return username.length === 1 ? `*@${domain}` : `${username[0]}*@${domain}`;
+  //   }
+  //   const maskedUsername = username.substring(0, 2) + '*'.repeat(Math.max(0, username.length - 2));
+  //   return `${maskedUsername}@${domain}`;
+  // };
 
   const getServiceTypeIcon = (serviceType: Account['serviceType']) => {
     switch (serviceType) {
@@ -61,31 +93,31 @@ export const AccountDetailsModal: React.FC<AccountDetailsModalProps> = ({ accoun
     }
   };
 
-  const getStatusIcon = (status: Account['renewalStatus']) => {
-    switch (status) {
-      case 'renewable':
-        return <CheckCircle size={20} className="text-green-400" />;
-      case 'non-renewable':
-        return <AlertCircle size={20} className="text-yellow-400" />;
-      case 'expired':
-        return <XCircle size={20} className="text-red-400" />;
-    }
-  };
+  // const getStatusIcon = (status: Account['renewalStatus']) => {
+  //   switch (status) {
+  //     case 'renewable':
+  //       return <CheckCircle size={20} className="text-green-400" />;
+  //     case 'non-renewable':
+  //       return <AlertCircle size={20} className="text-yellow-400" />;
+  //     case 'expired':
+  //       return <XCircle size={20} className="text-red-400" />;
+  //   }
+  // };
 
-  const getAccessLevelIcon = (level: 'admin' | 'standard') => {
-    return level === 'admin' ? 
-      <Crown size={16} className="text-yellow-400" /> : 
-      <User size={16} className="text-blue-400" />;
-  };
+  // const getAccessLevelIcon = (level: 'admin' | 'standard') => {
+  //   return level === 'admin' ? 
+  //     <Crown size={16} className="text-yellow-400" /> : 
+  //     <User size={16} className="text-blue-400" />;
+  // };
 
-  const getLastActiveColor = (lastActive?: Date) => {
-    if (!lastActive) return 'text-gray-500';
-    const daysSince = Math.floor((Date.now() - new Date(lastActive).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSince === 0) return 'text-green-400';
-    if (daysSince <= 3) return 'text-yellow-400';
-    if (daysSince <= 7) return 'text-orange-400';
-    return 'text-red-400';
-  };
+  // const getLastActiveColor = (lastActive?: Date) => {
+  //   if (!lastActive) return 'text-gray-500';
+  //   const daysSince = Math.floor((Date.now() - new Date(lastActive).getTime()) / (1000 * 60 * 60 * 24));
+  //   if (daysSince === 0) return 'text-green-400';
+  //   if (daysSince <= 3) return 'text-yellow-400';
+  //   if (daysSince <= 7) return 'text-orange-400';
+  //   return 'text-red-400';
+  // };
 
   if (!account) {
     return (
@@ -117,7 +149,7 @@ export const AccountDetailsModal: React.FC<AccountDetailsModalProps> = ({ accoun
 
         {/* Tabs */}
         <div className="flex border-b border-slate-700">
-          {['overview', 'users', 'features'].map(tab => (
+          {['overview', 'users'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as typeof activeTab)}
@@ -134,26 +166,46 @@ export const AccountDetailsModal: React.FC<AccountDetailsModalProps> = ({ accoun
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {activeTab === 'overview' && (
-            <div>
-              {/* Account overview info here, same as your original code */}
-              {/* ... */}
-              <p>Overview tab content goes here</p>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-1">Description</h3>
+                <p className="text-gray-200 whitespace-pre-wrap">
+                  {account.description || 'No description provided.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-slate-700 rounded p-3">
+                  <div className="text-gray-400 text-xs">Service Type</div>
+                  <div className="text-white">{account.serviceType}</div>
+                </div>
+                <div className="bg-slate-700 rounded p-3">
+                  <div className="text-gray-400 text-xs">Subscription</div>
+                  <div className="text-white">{account.subscriptionType}</div>
+                </div>
+                <div className="bg-slate-700 rounded p-3">
+                  <div className="text-gray-400 text-xs">Cost (LKR)</div>
+                  <div className="text-white">{account.cost}</div>
+                </div>
+                <div className="bg-slate-700 rounded p-3">
+                  <div className="text-gray-400 text-xs">Renewal Status</div>
+                  <div className="text-white">{account.renewalStatus}</div>
+                </div>
+              </div>
             </div>
           )}
 
           {activeTab === 'users' && (
-            <div>
-              {/* User list rendering here */}
-              {/* ... */}
-              <p>Users tab content goes here</p>
-            </div>
-          )}
-
-          {activeTab === 'features' && (
-            <div>
-              {/* Features and restrictions content */}
-              {/* ... */}
-              <p>Features & Restrictions tab content goes here</p>
+            <div className="space-y-4">
+              <div className="text-gray-200">Users in this account</div>
+              <div className="bg-slate-700 rounded p-3">
+                <div className="text-gray-400 text-xs mb-1">Primary Holder</div>
+                <div className="text-white">{account.primaryHolder?.name || 'N/A'}</div>
+                <div className="text-gray-300 text-sm">{account.primaryHolder?.email || account.primaryHolder?.phone || 'No contact provided'}</div>
+              </div>
+              <div className="text-gray-400 text-sm">
+                Current users: {account.currentUsers || 0} / Max slots: {account.maxUserSlots}
+              </div>
+              {/* If you add a users table, render the list here */}
             </div>
           )}
         </div>

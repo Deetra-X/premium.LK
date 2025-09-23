@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Plus, Trash2 } from 'lucide-react';
-import { Account, UserSlot } from '../types/index';
+import { Account } from '../types/index';
 
 interface EditAccountModalProps {
   account: Account;
@@ -10,26 +10,27 @@ interface EditAccountModalProps {
 
 export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    productName: account.productName,
-    label: account.label,
-    email: account.email,
+    productName: account.productName || '',
+    label: account.label || '',
+    // Hide generated placeholder emails in the UI
+    email: account.email && account.email.endsWith('@no-email.local') ? '' : (account.email || ''),
     renewalStatus: account.renewalStatus,
     daysUntilRenewal: account.daysUntilRenewal?.toString() || '',
-    cost: account.cost.toString(),
-    description: account.description,
-    isActive: account.isActive,
-    serviceType: account.serviceType,
-    subscriptionType: account.subscriptionType,
-    renewalDate: account.renewalDate.toISOString().split('T')[0],
-    maxUserSlots: account.maxUserSlots.toString(),
-    isSharedAccount: account.isSharedAccount,
-    familyFeatures: [...account.familyFeatures],
-    usageRestrictions: [...account.usageRestrictions],
+    cost: (account.cost ?? '').toString(),
+    description: account.description || '',
+    isActive: account.isActive ?? true,
+    serviceType: account.serviceType || 'other',
+    subscriptionType: account.subscriptionType || 'monthly',
+  renewalDate: account.renewalDate ? new Date(account.renewalDate).toISOString().split('T')[0] : '',
+    maxUserSlots: (account.maxUserSlots ?? 0).toString(),
+    isSharedAccount: account.isSharedAccount ?? false,
+    familyFeatures: Array.isArray(account.familyFeatures) ? [...account.familyFeatures] : [],
+    usageRestrictions: Array.isArray(account.usageRestrictions) ? [...account.usageRestrictions] : [],
     costPerAdditionalUser: account.costPerAdditionalUser?.toString() || '',
     primaryHolder: {
-      name: account.primaryHolder.name,
-      email: account.primaryHolder.email,
-      phone: account.primaryHolder.phone || ''
+      name: account.primaryHolder?.name || '',
+      email: account.primaryHolder?.email || '',
+      phone: account.primaryHolder?.phone || ''
     }
   });
 
@@ -38,31 +39,31 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!formData.productName.trim()) {
+    if (!(formData.productName || '').trim()) {
       newErrors.productName = 'Product name is required';
     }
 
-    if (!formData.label.trim()) {
+    if (!(formData.label || '').trim()) {
       newErrors.label = 'Label is required';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Account email is optional; validate only if provided
+    if ((formData.email || '').trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((formData.email || '').trim())) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.cost.trim()) {
+    if (!(formData.cost || '').trim()) {
       newErrors.cost = 'Cost is required';
     } else if (isNaN(Number(formData.cost)) || Number(formData.cost) <= 0) {
       newErrors.cost = 'Please enter a valid cost amount';
     }
 
-    if (!formData.renewalDate.trim()) {
+    // Renewal date is only required for renewable accounts
+    if (formData.renewalStatus === 'renewable' && !(formData.renewalDate || '').trim()) {
       newErrors.renewalDate = 'Renewal date is required';
     }
 
-    if (!formData.maxUserSlots.trim()) {
+    if (!(formData.maxUserSlots || '').trim()) {
       newErrors.maxUserSlots = 'Max user slots is required';
     } else if (isNaN(Number(formData.maxUserSlots))) {
       newErrors.maxUserSlots = 'Please enter a valid number';
@@ -70,23 +71,22 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
       newErrors.maxUserSlots = 'User slots cannot be negative';
     }
 
-    if (!formData.primaryHolder.name.trim()) {
+    if (!(formData.primaryHolder.name || '').trim()) {
       newErrors.primaryHolderName = 'Primary holder name is required';
     }
 
-    if (!formData.primaryHolder.email.trim()) {
-      newErrors.primaryHolderEmail = 'Primary holder email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.primaryHolder.email)) {
+    // Primary holder email optional; validate only if provided
+    if ((formData.primaryHolder.email || '').trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((formData.primaryHolder.email || '').trim())) {
       newErrors.primaryHolderEmail = 'Please enter a valid email address';
     }
 
-    if (formData.renewalStatus === 'renewable' && formData.daysUntilRenewal.trim()) {
+    if (formData.renewalStatus === 'renewable' && (formData.daysUntilRenewal || '').trim()) {
       if (isNaN(Number(formData.daysUntilRenewal)) || Number(formData.daysUntilRenewal) < 0) {
         newErrors.daysUntilRenewal = 'Please enter a valid number of days';
       }
     }
 
-    if (formData.costPerAdditionalUser.trim() && (isNaN(Number(formData.costPerAdditionalUser)) || Number(formData.costPerAdditionalUser) < 0)) {
+    if ((formData.costPerAdditionalUser || '').trim() && (isNaN(Number(formData.costPerAdditionalUser)) || Number(formData.costPerAdditionalUser) < 0)) {
       newErrors.costPerAdditionalUser = 'Please enter a valid cost amount';
     }
 
@@ -109,19 +109,21 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
     }
 
     const maxSlots = Number(formData.maxUserSlots);
-    const renewalDate = new Date(formData.renewalDate);
+    const renewalDate = formData.renewalStatus === 'renewable' && (formData.renewalDate || '').trim()
+      ? new Date(formData.renewalDate)
+      : account.renewalDate;
 
     const updatedAccount: Account = {
       ...account,
-      productName: formData.productName.trim(),
-      label: formData.label.trim(),
-      email: formData.email.trim(),
+      productName: (formData.productName || '').trim(),
+      label: (formData.label || '').trim(),
+      email: (formData.email || '').trim(),
       renewalStatus: formData.renewalStatus,
-      daysUntilRenewal: formData.renewalStatus === 'renewable' && formData.daysUntilRenewal.trim() 
+      daysUntilRenewal: formData.renewalStatus === 'renewable' && (formData.daysUntilRenewal || '').trim() 
         ? Number(formData.daysUntilRenewal) 
         : undefined,
       cost: Number(formData.cost),
-      description: formData.description.trim(),
+      description: (formData.description || '').trim(),
       isActive: formData.isActive,
       serviceType: formData.serviceType,
       subscriptionType: formData.subscriptionType,
@@ -129,13 +131,13 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
       maxUserSlots: maxSlots,
       availableSlots: Math.max(0, maxSlots - account.currentUsers), // Primary holder doesn't take a slot
       isSharedAccount: formData.isSharedAccount,
-      familyFeatures: formData.familyFeatures.filter(f => f.trim() !== ''),
-      usageRestrictions: formData.usageRestrictions.filter(r => r.trim() !== ''),
-      costPerAdditionalUser: formData.costPerAdditionalUser.trim() ? Number(formData.costPerAdditionalUser) : undefined,
+      familyFeatures: (formData.familyFeatures || []).filter(f => (f || '').trim() !== ''),
+      usageRestrictions: (formData.usageRestrictions || []).filter(r => (r || '').trim() !== ''),
+      costPerAdditionalUser: (formData.costPerAdditionalUser || '').trim() ? Number(formData.costPerAdditionalUser) : undefined,
       primaryHolder: {
-        name: formData.primaryHolder.name.trim(),
-        email: formData.primaryHolder.email.trim(),
-        phone: formData.primaryHolder.phone.trim() || undefined
+        name: (formData.primaryHolder.name || '').trim(),
+        email: (formData.primaryHolder.email || '').trim(),
+        phone: (formData.primaryHolder.phone || '').trim() || undefined
       }
     };
 
@@ -146,19 +148,49 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
   const handleInputChange = (field: string, value: string | boolean) => {
     if (field.startsWith('primaryHolder.')) {
       const holderField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        primaryHolder: {
-          ...prev.primaryHolder,
-          [holderField]: value
+      setFormData(prev => {
+        // Enforce mutual exclusivity: if user enters phone, clear email; if enters email, clear phone
+        if (holderField === 'phone' && typeof value === 'string' && value.trim() !== '') {
+          return {
+            ...prev,
+            primaryHolder: {
+              ...prev.primaryHolder,
+              phone: value as string,
+              email: ''
+            }
+          };
         }
-      }));
+        if (holderField === 'email' && typeof value === 'string' && value.trim() !== '') {
+          return {
+            ...prev,
+            primaryHolder: {
+              ...prev.primaryHolder,
+              email: value as string,
+              phone: ''
+            }
+          };
+        }
+        return {
+          ...prev,
+          primaryHolder: {
+            ...prev.primaryHolder,
+            [holderField]: value
+          }
+        };
+      });
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      if (field === 'renewalStatus' && typeof value === 'string' && value !== 'renewable') {
+        setFormData(prev => ({ ...prev, [field]: value as Account['renewalStatus'], renewalDate: '', daysUntilRenewal: '' }));
+      } else {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      }
     }
-    
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    // Clear related error
+    const errorKey = field.startsWith('primaryHolder.')
+      ? (field.split('.')[1] === 'name' ? 'primaryHolderName' : 'primaryHolderEmail')
+      : field;
+    if (errors[errorKey]) {
+      setErrors(prev => ({ ...prev, [errorKey]: '' }));
     }
   };
 
@@ -277,7 +309,7 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
           {/* Account Email */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Account Email Address *
+              Account Email Address (optional)
             </label>
             <input
               type="email"
@@ -315,36 +347,41 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  value={formData.primaryHolder.email}
-                  onChange={(e) => handleInputChange('primaryHolder.email', e.target.value)}
-                  className={`w-full px-3 py-2 bg-slate-600 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.primaryHolderEmail ? 'border-red-500' : 'border-slate-500'
-                  }`}
-                  placeholder="john@example.com"
-                />
-                {errors.primaryHolderEmail && (
-                  <p className="text-red-400 text-sm mt-1">{errors.primaryHolderEmail}</p>
-                )}
-              </div>
+              {/* Show either Email OR Phone based on what the user enters. If both empty, show both. */}
+              {(!(formData.primaryHolder.phone || '').trim()) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email Address (optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.primaryHolder.email}
+                    onChange={(e) => handleInputChange('primaryHolder.email', e.target.value)}
+                    className={`w-full px-3 py-2 bg-slate-600 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.primaryHolderEmail ? 'border-red-500' : 'border-slate-500'
+                    }`}
+                    placeholder="john@example.com"
+                  />
+                  {errors.primaryHolderEmail && (
+                    <p className="text-red-400 text-sm mt-1">{errors.primaryHolderEmail}</p>
+                  )}
+                </div>
+              )}
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Phone Number (Optional)
-                </label>
-                <input
-                  type="tel"
-                  value={formData.primaryHolder.phone}
-                  onChange={(e) => handleInputChange('primaryHolder.phone', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+94771234567"
-                />
-              </div>
+              {(!(formData.primaryHolder.email || '').trim()) && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Phone Number (optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.primaryHolder.phone}
+                    onChange={(e) => handleInputChange('primaryHolder.phone', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="+94771234567"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -364,23 +401,24 @@ export const EditAccountModal: React.FC<EditAccountModalProps> = ({ account, onC
                 <option value="expired">Expired</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Renewal Date *
-              </label>
-              <input
-                type="date"
-                value={formData.renewalDate}
-                onChange={(e) => handleInputChange('renewalDate', e.target.value)}
-                className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.renewalDate ? 'border-red-500' : 'border-slate-600'
-                }`}
-              />
-              {errors.renewalDate && (
-                <p className="text-red-400 text-sm mt-1">{errors.renewalDate}</p>
-              )}
-            </div>
+            {formData.renewalStatus === 'renewable' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Renewal Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.renewalDate}
+                  onChange={(e) => handleInputChange('renewalDate', e.target.value)}
+                  className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.renewalDate ? 'border-red-500' : 'border-slate-600'
+                  }`}
+                />
+                {errors.renewalDate && (
+                  <p className="text-red-400 text-sm mt-1">{errors.renewalDate}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {formData.renewalStatus === 'renewable' && (

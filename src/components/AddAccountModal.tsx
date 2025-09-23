@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Check, AlertCircle } from 'lucide-react';
-import { Account, UserSlot, ProductCategory } from '../types';
+import { Account, UserSlot, ProductCategory } from '../types/index';
 import { fetchCategories } from '../api/Categories';
 import { createAccount } from '../api/Accounts';
 
@@ -71,7 +71,7 @@ const AccountToast: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, 
   );
 };
 
-export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd, onSuccess }) => {
+export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onSuccess }) => {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [availableServiceTypes, setAvailableServiceTypes] = useState<string[]>(['other']);
   const [loading, setLoading] = useState(false);
@@ -106,6 +106,31 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Narrow payload type we send to createAccount
+  type NewAccountPayload = {
+    productName: string;
+    label: string;
+    email: string;
+    renewalStatus: Account['renewalStatus'];
+    daysUntilRenewal?: number;
+    cost: number;
+    description: string;
+    isActive: boolean;
+    categoryId?: string;
+    serviceType: Account['serviceType'];
+    subscriptionType: Account['subscriptionType'];
+    renewalDate?: string; // ISO date string only when renewable
+    maxUserSlots: number;
+    availableSlots: number;
+    currentUsers: number;
+    isSharedAccount: boolean;
+    familyFeatures: string[];
+    usageRestrictions: string[];
+    costPerAdditionalUser?: number;
+    primaryHolder: Account['primaryHolder'];
+    userSlots: UserSlot[];
+  };
+
   // Toast utility functions
   const addToast = (type: 'success' | 'error', message: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -137,13 +162,19 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
     try {
       const fetchedCategories = await fetchCategories();
       // Parse serviceTypes from backend format
-      const parsedCategories = fetchedCategories.map((cat: BackendCategory) => ({
-        ...cat,
-        serviceTypes: Array.isArray(cat.service_types) 
-          ? cat.service_types 
+      const parsedCategories: ProductCategory[] = fetchedCategories.map((cat: BackendCategory) => ({
+        id: cat.id,
+        name: cat.name,
+        description: cat.description,
+        icon: cat.icon,
+        color: cat.color,
+        serviceTypes: Array.isArray(cat.service_types)
+          ? cat.service_types
           : typeof cat.service_types === 'string'
             ? cat.service_types.split(',').map((s: string) => s.trim()).filter((s: string) => s)
-            : ['other']
+            : ['other'],
+        createdAt: new Date(cat.createdAt),
+        isActive: cat.isActive
       }));
       setCategories(parsedCategories);
     } catch (error) {
@@ -195,8 +226,11 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
       newErrors.cost = 'Please enter a valid cost amount';
     }
 
-    if (!formData.renewalDate.trim()) {
-      newErrors.renewalDate = 'Renewal date is required';
+    // Renewal date is only required for renewable accounts
+    if (formData.renewalStatus === 'renewable') {
+      if (!formData.renewalDate.trim()) {
+        newErrors.renewalDate = 'Renewal date is required';
+      }
     }
 
     if (!formData.maxUserSlots.trim()) {
@@ -259,8 +293,10 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
 
     try {
       const maxSlots = Number(formData.maxUserSlots);
-      const renewalDate = new Date(formData.renewalDate);
-      const formattedRenewalDate = renewalDate.toISOString().split('T')[0];
+      // Only compute renewal date for renewable accounts
+      const formattedRenewalDate = formData.renewalStatus === 'renewable' && formData.renewalDate
+        ? new Date(formData.renewalDate).toISOString().split('T')[0]
+        : undefined;
 
       // Create primary user slot - use the appropriate contact information
       const primaryUserSlot: UserSlot = {
@@ -281,16 +317,18 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
       };
 
       // Prepare primary holder data based on contact type
-      const primaryHolderData = {
+      const primaryHolderData: Account['primaryHolder'] = {
         name: formData.primaryHolder.name.trim(),
-        // Set email or phone based on contact type
-        ...(formData.primaryHolder.contactType === 'email' 
-          ? { email: formData.primaryHolder.email.trim(), phone: undefined }
-          : { email: undefined, phone: formData.primaryHolder.phone.trim() }
-        )
+        // Email is required in type; use empty string when contact type is phone
+        email: formData.primaryHolder.contactType === 'email' 
+          ? formData.primaryHolder.email.trim() 
+          : '',
+        phone: formData.primaryHolder.contactType === 'phone' 
+          ? formData.primaryHolder.phone.trim() || undefined 
+          : undefined
       };
       
-      const accountData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'> = {
+      const accountData: NewAccountPayload = {
         productName: formData.productName.trim(),
         label: formData.label.trim(),
         email: formData.primaryHolder.contactType === 'email' ? formData.primaryHolder.email.trim() : '', // Set account email to primary holder's email if contact type is email, otherwise empty string
@@ -304,6 +342,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
         categoryId: formData.categoryId,
         serviceType: formData.serviceType,
         subscriptionType: formData.subscriptionType,
+        // For non-renewable/expired, do not send a renewal date
         renewalDate: formattedRenewalDate,
         maxUserSlots: maxSlots,
         availableSlots: maxSlots, // All slots available initially
@@ -316,7 +355,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
         userSlots: [primaryUserSlot]
       };
 
-      console.log('📋 Account data prepared:', accountData);
+  console.log('📋 Account data prepared:', accountData);
       
       const createdAccount = await createAccount(accountData);
       console.log('✅ Account created successfully:', createdAccount);
@@ -331,6 +370,9 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
       
       setTimeout(() => {
         const categoryName = categories.find(c => c.id === formData.categoryId)?.name || 'Unknown';
+        const renewalText = formattedRenewalDate 
+          ? new Date(formData.renewalDate).toLocaleDateString()
+          : 'N/A';
         addToast('success', 
           `✅ Account "${accountData.productName}" Details:\n\n` +
           `📦 Product: ${accountData.productName}\n` +
@@ -339,7 +381,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
           `🔧 Service: ${accountData.serviceType}\n` +
           `💰 Cost: LKR ${accountData.cost.toLocaleString()}\n` +
           `👥 User Slots: ${accountData.currentUsers}/${accountData.maxUserSlots}\n` +
-          `📅 Renewal: ${renewalDate.toLocaleDateString()}\n` +
+          `📅 Renewal: ${renewalText}\n` +
           `👤 Primary Holder: ${accountData.primaryHolder.name}`
         );
       }, 1500);
@@ -358,7 +400,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
           `✓ Primary holder: ${accountData.primaryHolder.name} (${contactInfo})\n` +
           `✓ Subscription: ${accountData.subscriptionType}\n` +
           `✓ Available slots: ${accountData.availableSlots} remaining\n` +
-          `✓ Renewal date: ${renewalDate.toLocaleDateString()}`;
+          (formattedRenewalDate ? `✓ Renewal date: ${new Date(formData.renewalDate).toLocaleDateString()}` : '✓ Renewal date: N/A');
         
         addToast('success', notificationMessage);
         console.log('📢 Notification toast added:', notificationMessage);
@@ -370,10 +412,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
         onSuccess();
       }
 
-      if (onAdd) {
-        console.log('📞 Calling onAdd callback');
-        onAdd(accountData);
-      }
+      // onAdd is optional and not needed since onSuccess reloads the list
 
       // Close modal after longer delay to show all messages
       setTimeout(() => {
@@ -435,7 +474,12 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
         }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      // If switching renewal status to non-renewable/expired, clear date and daysUntilRenewal
+      if (field === 'renewalStatus' && typeof value === 'string' && value !== 'renewable') {
+        setFormData(prev => ({ ...prev, [field]: value as Account['renewalStatus'], renewalDate: '', daysUntilRenewal: '' }));
+      } else {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      }
     }
     
     if (errors[field]) {
@@ -705,23 +749,24 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
                 <option value="expired">Expired</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Renewal Date *
-              </label>
-              <input
-                type="date"
-                value={formData.renewalDate}
-                onChange={(e) => handleInputChange('renewalDate', e.target.value)}
-                className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.renewalDate ? 'border-red-500' : 'border-slate-600'
-                }`}
-              />
-              {errors.renewalDate && (
-                <p className="text-red-400 text-sm mt-1">{errors.renewalDate}</p>
-              )}
-            </div>
+            {formData.renewalStatus === 'renewable' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Renewal Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.renewalDate}
+                  onChange={(e) => handleInputChange('renewalDate', e.target.value)}
+                  className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.renewalDate ? 'border-red-500' : 'border-slate-600'
+                  }`}
+                />
+                {errors.renewalDate && (
+                  <p className="text-red-400 text-sm mt-1">{errors.renewalDate}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {formData.renewalStatus === 'renewable' && (
@@ -950,14 +995,14 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose, onAdd
       </div>
       
       {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env?.MODE === 'development' && (
         <div className="fixed bottom-4 left-4 bg-black text-white p-2 text-xs rounded z-[300]">
           Toasts: {toasts.length} | Product: {formData.productName}
         </div>
       )}
       
       {/* Add CSS animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes slideInRight {
           from {
             transform: translateX(100%);

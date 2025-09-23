@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // API functions for Accounts
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -110,7 +111,8 @@ export async function createAccount(accountData: any): Promise<any> {
     service_type: accountData.serviceType || 'other',
     subscription_type: accountData.subscriptionType || 'monthly',
     renewal_status: accountData.renewalStatus || 'renewable',
-    renewal_date: accountData.renewalDate || new Date(),
+  // Send null if not renewable so DB can accept nullable field
+  renewal_date: accountData.renewalStatus === 'renewable' ? (accountData.renewalDate || new Date()) : null,
     cost: accountData.cost || 0,
     brand: accountData.brand || '',
     description: accountData.description || '',

@@ -23,7 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Account, ProductCategory } from '../types/index';
-import { fetchAccounts, deleteAccount } from '../api/Accounts';
+import { fetchAccounts, deleteAccount, updateAccount } from '../api/Accounts';
 import { fetchCategories } from '../api/Categories';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { AddAccountModal } from './AddAccountModal';
@@ -235,8 +235,12 @@ export const AccountsManagement: React.FC = () => {
     }));
   };
 
-  const maskEmail = (email: string) => {
-    const [username, domain] = email.split('@');
+  const maskEmail = (email?: string | null) => {
+    if (!email || typeof email !== 'string') return 'No email';
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) return 'No email';
+    const [username, domain] = trimmed.split('@');
+    if (!username || !domain) return 'No email';
     if (username.length <= 2) {
       return username.length === 1 ? `*@${domain}` : `${username[0]}*@${domain}`;
     }
@@ -245,15 +249,68 @@ export const AccountsManagement: React.FC = () => {
   };
 
   const handleEditAccount = (updatedAccount: Account) => {
+    // Optimistically update UI
     setAccounts(prev => prev.map(account => 
-      account.email === updatedAccount.email 
+      account.id === updatedAccount.id 
         ? { ...updatedAccount, updatedAt: new Date() }
         : account
     ));
+
+    // Persist to backend
+    (async () => {
+      try {
+        const toSqlDate = (d: string | Date | null | undefined) => {
+          try {
+            const date = d instanceof Date ? d : new Date(d || '');
+            return isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+          } catch {
+            return null;
+          }
+        };
+
+        const payload = {
+          product_name: updatedAccount.productName,
+          label: updatedAccount.label || null,
+          email: updatedAccount.email || null,
+          renewal_status: updatedAccount.renewalStatus,
+          days_until_renewal: updatedAccount.renewalStatus === 'renewable' && updatedAccount.daysUntilRenewal !== undefined
+            ? updatedAccount.daysUntilRenewal
+            : null,
+          cost: updatedAccount.cost,
+          description: updatedAccount.description || null,
+          is_active: updatedAccount.isActive,
+          service_type: updatedAccount.serviceType,
+          subscription_type: updatedAccount.subscriptionType,
+          renewal_date: updatedAccount.renewalStatus === 'renewable'
+            ? toSqlDate(updatedAccount.renewalDate as unknown as string | Date | null | undefined)
+            : null,
+          category_id: updatedAccount.categoryId || null,
+          brand: updatedAccount.brand || null,
+          max_user_slots: updatedAccount.maxUserSlots,
+          available_slots: updatedAccount.availableSlots,
+          current_users: updatedAccount.currentUsers,
+          cost_per_additional_user: updatedAccount.costPerAdditionalUser ?? null,
+          is_shared_account: updatedAccount.isSharedAccount,
+          family_features: updatedAccount.familyFeatures,
+          usage_restrictions: updatedAccount.usageRestrictions,
+          primary_holder_name: updatedAccount.primaryHolder?.name || null,
+          primary_holder_email: updatedAccount.primaryHolder?.email || null,
+          primary_holder_phone: updatedAccount.primaryHolder?.phone || null,
+        } as const;
+
+        await updateAccount(updatedAccount.id, payload);
+        // Ensure state reflects database
+        await loadData();
+        console.log('✅ Account saved to database');
+      } catch (err) {
+        console.error('❌ Failed to save account to database:', err);
+        alert('Failed to save changes to the database. Please try again.');
+      }
+    })();
   };
 
   const handleDeleteAccount = async (accountId: string) => {
-    const accountToDelete = accounts.find(acc => acc.email === accountId);
+    const accountToDelete = accounts.find(acc => acc.id === accountId);
     const accountName = accountToDelete?.productName || 'Unknown Account';
     
     const confirmed = confirm(`Are you sure you want to permanently delete "${accountName}"? This action cannot be undone.`);
@@ -379,15 +436,35 @@ export const AccountsManagement: React.FC = () => {
           </div>
           <p className="text-sm text-white font-medium">{account.primaryHolder.name}</p>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-mono">
-              {showEmailDetails[account.id] ? account.primaryHolder.email : maskEmail(account.primaryHolder.email)}
-            </span>
-            <button
-              onClick={() => toggleEmailVisibility(account.id)}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
-            >
-              {showEmailDetails[account.id] ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
+            {(() => {
+              const hasEmail = !!account.primaryHolder.email && account.primaryHolder.email.trim() !== '';
+              const contactText = hasEmail
+                ? (showEmailDetails[account.id] ? account.primaryHolder.email : maskEmail(account.primaryHolder.email))
+                : (account.primaryHolder.phone || 'No contact');
+              const badgeText = hasEmail ? 'Email' : 'Phone';
+              const badgeClass = hasEmail ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300';
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded ${badgeClass}`}>
+                      {badgeText}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono">
+                      {contactText}
+                    </span>
+                  </div>
+                  {hasEmail && (
+                    <button
+                      onClick={() => toggleEmailVisibility(account.id)}
+                      className="p-1 text-gray-400 hover:text-white transition-colors"
+                      title={showEmailDetails[account.id] ? 'Hide email' : 'Show email'}
+                    >
+                      {showEmailDetails[account.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -824,7 +901,7 @@ export const AccountsManagement: React.FC = () => {
       {/* Account Details Modal */}
       {showDetailsModal && selectedAccount && (
         <AccountDetailsModal
-          accountEmail={selectedAccount.email}
+          accountId={selectedAccount.id}
           onClose={() => {
             setShowDetailsModal(false);
             setSelectedAccount(null);
