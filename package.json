@@ -12,6 +12,7 @@
     "setup-db": "node setup-db.js"
   },
   "dependencies": {
+    "html2pdf.js": "^0.10.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "lucide-react": "^0.344.0",

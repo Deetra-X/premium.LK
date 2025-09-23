@@ -16,11 +16,15 @@ import {
   AlertTriangle,
   XCircle
 } from 'lucide-react';
-import { Invoice } from '../types/index';
+import { Invoice, InvoiceItem } from '../types/index';
+// @ts-expect-error - html2pdf.js has no official types
+import html2pdf from 'html2pdf.js';
 import { getInvoices, updateInvoiceStatus } from '../data/invoiceData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CreateInvoiceModal } from './CreateInvoiceModal';
 import { InvoiceModal } from './InvoiceModal';
+import { createRoot } from 'react-dom/client';
+import InvoiceBody from './InvoiceBody';
 
 export const InvoiceManagement: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -42,41 +46,25 @@ export const InvoiceManagement: React.FC = () => {
       setLoading(true);
       console.log('🔄 Loading invoices...');
       const invoicesData = await getInvoices();
-      
-      // Ensure we have a valid array and each invoice has required properties
+
       const validInvoices = (invoicesData || []).filter(invoice => 
-        invoice && 
-        invoice.id && 
-        invoice.invoiceNumber && 
+        invoice &&
+        invoice.id &&
+        invoice.invoiceNumber &&
         invoice.customerInfo &&
         typeof invoice.customerInfo === 'object'
       );
-      
+
       setInvoices(validInvoices);
       console.log(`✅ Loaded ${validInvoices.length} valid invoices`);
     } catch (error) {
       console.error('❌ Error loading invoices:', error);
-      setInvoices([]); // Set empty array on error
+      setInvoices([]);
       alert('❌ Failed to load invoices. Please refresh the page.');
     } finally {
       setLoading(false);
     }
   };
-
-  const filteredInvoices = invoices.filter(invoice => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
-      (invoice.invoiceNumber || '').toLowerCase().includes(searchLower) ||
-      (invoice.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
-      (invoice.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
-      (invoice.customerInfo?.customerType === 'reseller' && 
-       (invoice.customerInfo?.resellerInfo?.resellerId || '').toLowerCase().includes(searchLower));
-    
-    const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
-    const matchesCustomerType = filterCustomerType === 'all' || invoice.customerInfo?.customerType === filterCustomerType;
-    
-    return matchesSearch && matchesStatus && matchesCustomerType;
-  });
 
   const getStatusIcon = (status: Invoice['status']) => {
     switch (status) {
@@ -111,14 +99,8 @@ export const InvoiceManagement: React.FC = () => {
   const handleCreateInvoice = async (invoice: Invoice) => {
     try {
       console.log(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
-      
-      // Add the new invoice to the list and reload to get latest data
       setInvoices(prev => [invoice, ...prev]);
-      
-      // Show success message
       alert(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
-      
-      // Optionally reload to ensure consistency with database
       await loadInvoices();
     } catch (error) {
       console.error('❌ Error handling created invoice:', error);
@@ -156,6 +138,68 @@ export const InvoiceManagement: React.FC = () => {
     setSelectedInvoice(invoice);
     setShowInvoiceModal(true);
   };
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    let container: HTMLDivElement | null = null;
+    let root: ReturnType<typeof createRoot> | null = null;
+    try {
+      // Render the exact same body as the modal for a pixel-identical PDF
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+      root.render(
+        <div className="invoice-a4 p-6" style={{ width: '210mm', margin: '0 auto' }}>
+          <InvoiceBody invoice={invoice} status={invoice.status} />
+        </div>
+      );
+
+      // Wait for the next frame to ensure React has flushed to the DOM
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const element = container.firstElementChild as HTMLElement | null;
+      if (!element) throw new Error('Printable element not found');
+
+      const fileName = `Invoice-${invoice.invoiceNumber}.pdf`;
+      type H2P = () => {
+        set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } };
+      };
+      const h2p = ((html2pdf as unknown as { default?: H2P })?.default || (html2pdf as unknown as H2P));
+      await h2p()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        })
+        .from(element)
+        .save();
+    } catch (e) {
+      console.error('PDF generation failed', e);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      if (root) root.unmount();
+      if (container && container.parentNode) container.parentNode.removeChild(container);
+    }
+  };
+
+  // Filters applied to invoices for display
+  const filteredInvoices: Invoice[] = invoices.filter((invoice) => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      (invoice.invoiceNumber || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
+      (invoice.customerInfo?.customerType === 'reseller' &&
+        (invoice.customerInfo?.resellerInfo?.resellerId || '').toLowerCase().includes(searchLower));
+
+    const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
+    const matchesCustomerType = filterCustomerType === 'all' || invoice.customerInfo?.customerType === filterCustomerType;
+
+    return matchesSearch && matchesStatus && matchesCustomerType;
+  });
 
   // Calculate summary metrics
   const totalInvoices = invoices.length;
@@ -282,7 +326,7 @@ export const InvoiceManagement: React.FC = () => {
               <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => setFilterStatus(e.target.value as 'all' | 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled')}
                 className="pl-8 sm:pl-10 pr-6 sm:pr-8 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
               >
                 <option value="all">All Status</option>
@@ -296,7 +340,7 @@ export const InvoiceManagement: React.FC = () => {
 
             <select
               value={filterCustomerType}
-              onChange={(e) => setFilterCustomerType(e.target.value as any)}
+              onChange={(e) => setFilterCustomerType(e.target.value as 'all' | 'standard' | 'reseller')}
               className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
             >
               <option value="all">All Customers</option>
@@ -326,7 +370,7 @@ export const InvoiceManagement: React.FC = () => {
               <p className="text-gray-400">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            filteredInvoices.map((invoice) => {
+            filteredInvoices.map((invoice: Invoice) => {
               const isOverdue = invoice.status !== 'paid' && new Date() > invoice.dueDate;
               
               return (
@@ -417,7 +461,7 @@ export const InvoiceManagement: React.FC = () => {
                           <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                         <button
-                          onClick={() => alert('Download functionality would be implemented here')}
+                          onClick={() => handleDownloadInvoice(invoice)}
                           className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded-lg transition-colors"
                           title="Download PDF"
                         >
@@ -437,7 +481,7 @@ export const InvoiceManagement: React.FC = () => {
                   {/* Invoice Items Preview */}
                   <div className="mt-4 pt-4 border-t border-slate-600">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                      {invoice.items.slice(0, 3).map((item) => (
+                      {invoice.items.slice(0, 3).map((item: InvoiceItem) => (
                         <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-slate-600 rounded-lg">
                           <div className="min-w-0 flex-1">
                             <p className="text-white font-medium truncate">{item.productName}</p>

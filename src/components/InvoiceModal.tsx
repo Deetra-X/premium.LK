@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   X, 
   Download, 
@@ -10,13 +10,16 @@ import {
   User,
   Building,
   Phone,
-  MapPin,
   CreditCard,
   Tag,
   Percent,
   Receipt
 } from 'lucide-react';
-import { Invoice } from '../types';
+import { Invoice, InvoiceItem } from '../types/index';
+// @ts-expect-error - html2pdf.js has no official types
+import html2pdf from 'html2pdf.js';
+import { createRoot } from 'react-dom/client';
+import InvoiceBody from './InvoiceBody';
 import { getCompanyInfo } from '../data/companyInfo';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 
@@ -33,6 +36,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 }) => {
   const [currentStatus, setCurrentStatus] = useState(invoice.status);
   const companyInfo = getCompanyInfo();
+  const printRef = useRef<HTMLDivElement | null>(null);
 
   const handleStatusChange = (newStatus: Invoice['status']) => {
     setCurrentStatus(newStatus);
@@ -45,9 +49,50 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     window.print();
   };
 
-  const handleDownload = () => {
-    // In a real application, this would generate and download a PDF
-    alert('PDF download functionality would be implemented here');
+  const handleDownload = async () => {
+    let container: HTMLDivElement | null = null;
+    let root: ReturnType<typeof createRoot> | null = null;
+    try {
+      // Render the same body the modal shows so PDF matches exactly
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      root = createRoot(container);
+      root.render(
+        <div className="invoice-a4 p-6" style={{ width: '210mm', margin: '0 auto' }}>
+          <InvoiceBody invoice={invoice} status={currentStatus} />
+        </div>
+      );
+
+      // Wait a tick for React to commit
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const element = container.firstElementChild as HTMLElement | null;
+      if (!element) throw new Error('Printable element not found');
+
+      type H2P = () => {
+        set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } };
+      };
+      const fileName = `Invoice-${invoice.invoiceNumber}.pdf`;
+      const h2p = ((html2pdf as unknown as { default?: H2P })?.default || (html2pdf as unknown as H2P));
+      await h2p()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        })
+        .from(element)
+        .save();
+    } catch (e) {
+      console.error('PDF generation failed', e);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      if (root) root.unmount();
+      if (container && container.parentNode) container.parentNode.removeChild(container);
+    }
   };
 
   const handleEmail = () => {
@@ -75,7 +120,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   const isOverdue = invoice.status !== 'paid' && new Date() > invoice.dueDate;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 print:static print:p-0 print:bg-white print:bg-opacity-100">
       <div className="bg-white rounded-lg w-full max-w-5xl max-h-[98vh] sm:max-h-[95vh] overflow-hidden shadow-2xl">
         {/* Header - Non-printable */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 print:hidden">
@@ -135,13 +180,16 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         </div>
 
         {/* Invoice Content - A4 Optimized and Printable */}
-        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6" 
-             style={{ 
-               maxWidth: '100%', 
-               margin: '0 auto',
-               fontSize: '12px',
-               lineHeight: '1.4'
-             }}>
+        <div
+          ref={printRef}
+          className="invoice-a4 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6"
+          style={{
+            maxWidth: '100%',
+            margin: '0 auto',
+            fontSize: '12px',
+            lineHeight: '1.4'
+          }}
+        >
           {/* Company Header */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 sm:gap-0 mb-6 sm:mb-8 print:mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -186,41 +234,18 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                 Bill To:
               </h3>
               <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
-                <p className="font-semibold text-gray-900 text-sm sm:text-base print:text-sm">{invoice.customerInfo.name}</p>
-                <div className="text-gray-600 print:text-xs mt-2 space-y-1 text-xs sm:text-sm">
-                  {invoice.customerInfo.billingAddress ? (
-                    <>
-                      <p className="flex items-center gap-2">
-                        <MapPin size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
-                        <span className="print:inline">{invoice.customerInfo.billingAddress.street}</span>
-                      </p>
-                      <p className="ml-5 sm:ml-6 print:ml-0">
-                        {invoice.customerInfo.billingAddress.city}, {invoice.customerInfo.billingAddress.state}
-                      </p>
-                      <p className="ml-5 sm:ml-6 print:ml-0">
-                        {invoice.customerInfo.billingAddress.zipCode}, {invoice.customerInfo.billingAddress.country}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-gray-500 italic">No billing address provided</p>
-                  )}
+                {/* Primary: Only Name and Phone */}
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-bold text-gray-900 text-sm sm:text-base print:text-sm leading-snug">
+                    {invoice.customerInfo.name || 'Customer'}
+                  </p>
                   {invoice.customerInfo.phone && (
-                    <p className="flex items-center gap-2 mt-3 print:mt-2">
-                      <Phone size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
-                      <span>{invoice.customerInfo.phone}</span>
-                    </p>
-                  )}
-                  {invoice.customerInfo.email && (
-                    <p className="flex items-center gap-2">
-                      <Mail size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
-                      <span className="break-all sm:break-normal">{invoice.customerInfo.email}</span>
-                    </p>
-                  )}
-                  {invoice.customerInfo.taxId && (
-                    <p className="flex items-center gap-2">
-                      <Receipt size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
-                      <span>Tax ID: {invoice.customerInfo.taxId}</span>
-                    </p>
+                    <div className="text-right">
+                      <p className="flex items-center gap-1 justify-end text-gray-900 font-semibold text-sm sm:text-base print:text-sm">
+                        <Phone size={12} className="sm:w-3.5 sm:h-3.5 print:hidden flex-shrink-0" />
+                        <span>{invoice.customerInfo.phone}</span>
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -285,7 +310,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             
             {/* Mobile View - Stacked Cards */}
             <div className="block sm:hidden space-y-3 print:hidden">
-              {(invoice.items || []).map((item: any, index: number) => (
+              {(invoice.items || []).map((item: InvoiceItem, index: number) => (
                 <div key={item.id || index} className="bg-gray-50 p-3 rounded-lg border">
                   <div className="font-medium text-gray-900 mb-2">{item.productName}</div>
                   {item.description && (
@@ -334,7 +359,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {(invoice.items || []).map((item: any, index: number) => (
+                  {(invoice.items || []).map((item: InvoiceItem, index: number) => (
                     <tr key={item.id || index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="p-2 sm:p-3 print:p-2 border-b border-gray-200">
                         <div>

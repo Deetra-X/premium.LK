@@ -7,3 +7,41 @@
     @apply font-mono;
   }
 }
+
+/* Print styles for A4 single-page invoices */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Hide interactive UI chrome when printing */
+  .print\:hidden { display: none !important; }
+
+  /* Ensure our invoice area fits on one page and avoids breaks */
+  .invoice-a4 {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    width: 210mm; /* A4 width */
+    min-height: auto;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .invoice-a4 * {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Prevent tables and sections from breaking awkwardly */
+  table, tr, td, th, thead, tbody {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
