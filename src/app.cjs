@@ -1,3 +1,5 @@
+require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const db = require('./db');
@@ -10,10 +12,11 @@ app.use((req, res, next) => {
 });
 
 // Enable CORS for all routes
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'],
-  credentials: true
-}));
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://localhost:5174')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(express.json());
 
@@ -88,3 +91,13 @@ app.get('/test-db', async (req, res) => {
     res.status(500).send('DB connection failed: ' + err.message);
   }
 });
+
+// Serve static frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+  // SPA fallback
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}

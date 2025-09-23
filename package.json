@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node src/app.cjs",
+    "start": "node src/app.cjs",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
@@ -12,6 +13,7 @@
     "setup-db": "node setup-db.js"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "html2pdf.js": "^0.10.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
