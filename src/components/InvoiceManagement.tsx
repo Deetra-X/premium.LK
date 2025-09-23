@@ -175,7 +175,7 @@ export const InvoiceManagement: React.FC = () => {
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 1.8, useCORS: true, scrollY: 0 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] }
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
         })
         .from(element)
         .save();

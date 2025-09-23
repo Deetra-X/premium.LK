@@ -147,8 +147,8 @@ const InvoiceBody: React.FC<Props> = ({ invoice, status }) => {
         )}
       </div>
 
-      {/* Invoice Items */}
-      <div className="mb-6 sm:mb-8 print:mb-6">
+  {/* Invoice Items */}
+  <div className="mb-6 sm:mb-8 print:mb-6" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
         <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-3 sm:mb-4 print:mb-3">Items & Services</h3>
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full border border-gray-200 print:text-xs">
@@ -205,8 +205,8 @@ const InvoiceBody: React.FC<Props> = ({ invoice, status }) => {
         </div>
       </div>
 
-      {/* Totals */}
-      <div className="flex justify-center sm:justify-end mb-6 sm:mb-8 print:mb-6">
+  {/* Totals */}
+  <div className="flex justify-center sm:justify-end mb-6 sm:mb-8 print:mb-6" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
         <div className="w-full sm:max-w-md">
           <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
             {invoice.customerInfo.customerType === 'reseller' && (invoice.discountAmount || 0) > 0 && (
@@ -243,8 +243,8 @@ const InvoiceBody: React.FC<Props> = ({ invoice, status }) => {
         </div>
       </div>
 
-      {/* Payment Methods */}
-      <div className="mb-6 sm:mb-8 print:mb-6">
+  {/* Payment Methods */}
+  <div className="mb-6 sm:mb-8 print:mb-6" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
         <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2">Payment Methods Accepted</h3>
         <div className="bg-gray-50 p-3 sm:p-4 print:p-3 rounded-lg print:border print:border-gray-300">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 print:gap-2 text-xs sm:text-sm print:text-xs">
@@ -277,7 +277,7 @@ const InvoiceBody: React.FC<Props> = ({ invoice, status }) => {
 
       {/* Notes */}
       {invoice.notes && (
-        <div className="mb-6 sm:mb-8 print:mb-6">
+        <div className="mb-6 sm:mb-8 print:mb-6" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           <h3 className="text-base sm:text-lg print:text-sm font-semibold text-gray-900 mb-2 sm:mb-3 print:mb-2">Notes</h3>
           <div className="bg-yellow-50 border border-yellow-200 p-3 sm:p-4 print:p-3 rounded-lg">
             <p className="text-gray-700 print:text-xs text-xs sm:text-sm">{invoice.notes}</p>

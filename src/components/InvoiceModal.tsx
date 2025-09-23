@@ -45,8 +45,53 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    let container: HTMLDivElement | null = null;
+    let root: ReturnType<typeof createRoot> | null = null;
+    const cleanup = () => {
+      try {
+        if (root) root.unmount();
+        if (container && container.parentNode) container.parentNode.removeChild(container);
+      } catch (err) {
+        console.warn('Cleanup after print failed', err);
+      }
+    };
+    try {
+      // Create a print-only container at body level so only one page prints
+      container = document.createElement('div');
+  container.className = 'print-invoice avoid-break';
+      document.body.appendChild(container);
+
+      root = createRoot(container);
+      root.render(
+        <div
+          className="invoice-a4 p-6 avoid-break"
+          style={{ width: '190mm', margin: '0 auto', boxSizing: 'border-box' }}
+        >
+          <InvoiceBody invoice={invoice} status={currentStatus} />
+        </div>
+      );
+
+      // Wait a tick for the DOM to commit
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await new Promise((r) => setTimeout(r, 0));
+
+      const after = () => {
+        window.removeEventListener('afterprint', after);
+        cleanup();
+      };
+      window.addEventListener('afterprint', after);
+      window.print();
+
+      // Fallback cleanup in case afterprint doesn't fire
+      setTimeout(() => {
+        try { window.removeEventListener('afterprint', after); } catch (err) { console.warn('afterprint cleanup failed', err); }
+        cleanup();
+      }, 2000);
+    } catch (e) {
+      console.error('Print failed', e);
+      cleanup();
+    }
   };
 
   const handleDownload = async () => {
@@ -59,8 +104,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       root = createRoot(container);
       root.render(
         <div
-          className="invoice-a4 p-6"
-          style={{ width: '190mm', margin: '0 auto', boxSizing: 'border-box' }}
+          className="invoice-a4 p-6 avoid-break"
+          style={{ width: '189mm', margin: '0 auto', boxSizing: 'border-box' }}
         >
           <InvoiceBody invoice={invoice} status={currentStatus} />
         </div>
@@ -85,7 +130,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 1.8, useCORS: true, scrollY: 0 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] }
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
         })
         .from(element)
         .save();
@@ -185,7 +230,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         {/* Invoice Content - A4 Optimized and Printable */}
         <div
           ref={printRef}
-          className="invoice-a4 p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6"
+          className="invoice-a4 print-invoice p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)] print:max-h-none print:overflow-visible print:p-6"
           style={{
             maxWidth: '100%',
             margin: '0 auto',

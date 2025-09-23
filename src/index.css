@@ -21,7 +21,17 @@
     background: white !important;
   }
 
-  /* Hide interactive UI chrome when printing */
+  /* Hide everything except the invoice container and its children */
+  body *:not(.print-invoice):not(.print-invoice *) {
+    display: none !important;
+  }
+  /* Ensure invoice container prints normally */
+  .print-invoice {
+    display: block !important;
+    position: static !important;
+    margin: 0 auto !important;
+  }
+  /* Keep any elements marked as print:hidden hidden */
   .print\:hidden { display: none !important; }
 
   /* Ensure our invoice area fits on one page and avoids breaks */
@@ -45,5 +55,11 @@
   table, tr, td, th, thead, tbody {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  /* Elements marked avoid-break should not be split across pages */
+  .avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
