@@ -6,9 +6,10 @@ import {
   ShoppingCart, 
   Bell,
   X,
-  LogOut  // Add logout icon
+  LogOut,  // Add logout icon
+  Lock
 } from 'lucide-react';
-import { NavigationItem } from '../types';
+import { NavigationItem } from '../types/index';
 
 interface SidebarProps {
   currentView: NavigationItem;       // Currently selected navigation item
@@ -28,6 +29,7 @@ const menuItems = [
 
 interface SidebarPropsExtended extends SidebarProps {
   onLogout: () => void; // Callback for logout button click
+  onLock: () => void;   // Callback for lock screen
 }
 
 export const Sidebar: React.FC<SidebarPropsExtended> = ({ 
@@ -35,7 +37,8 @@ export const Sidebar: React.FC<SidebarPropsExtended> = ({
   onViewChange, 
   isOpen, 
   onToggle,
-  onLogout                          // Receive logout callback
+  onLogout,                         // Receive logout callback
+  onLock                            // Receive lock callback
 }) => {
   return (
     <>
@@ -93,6 +96,16 @@ export const Sidebar: React.FC<SidebarPropsExtended> = ({
               </button>
             );
           })}
+
+          {/* Lock button */}
+          <button
+            onClick={onLock}
+            className="w-full flex items-center px-6 py-3 mt-6 text-left text-yellow-400 hover:bg-yellow-600/20 hover:text-yellow-300 transition-colors duration-200"
+            aria-label="Lock"
+          >
+            <Lock size={20} className="mr-3" />
+            Lock
+          </button>
 
           {/* Logout button at bottom */}
           <button
