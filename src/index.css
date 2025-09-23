@@ -28,7 +28,9 @@
   .invoice-a4 {
     page-break-inside: avoid;
     break-inside: avoid;
-    width: 210mm; /* A4 width */
+    /* A4 inner width after 10mm page margins on left+right = 190mm */
+    width: 190mm;
+    box-sizing: border-box;
     min-height: auto;
     font-size: 11px;
     line-height: 1.35;

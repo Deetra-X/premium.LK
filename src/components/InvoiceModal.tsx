@@ -58,7 +58,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       document.body.appendChild(container);
       root = createRoot(container);
       root.render(
-        <div className="invoice-a4 p-6" style={{ width: '210mm', margin: '0 auto' }}>
+        <div
+          className="invoice-a4 p-6"
+          style={{ width: '190mm', margin: '0 auto', boxSizing: 'border-box' }}
+        >
           <InvoiceBody invoice={invoice} status={currentStatus} />
         </div>
       );
@@ -80,9 +83,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           margin: [10, 10, 10, 10],
           filename: fileName,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          html2canvas: { scale: 1.8, useCORS: true, scrollY: 0 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          pagebreak: { mode: ['css', 'legacy'] }
         })
         .from(element)
         .save();
