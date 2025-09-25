@@ -168,12 +168,13 @@ export interface Sale {
    totalAmount: number; // Alias for compatibility
   payment_method: 'cash' | 'bank_transfer';
   paymentMethod: 'cash' | 'bank_transfer'; // Alias for compatibility
-  order_date(order_date: any): import("react").ReactNode;
-  orderDate: Date; // Alias for compatibility
+  // The date the order was placed; backend returns string timestamps
+  order_date: string | Date;
+  orderDate: Date | string; // Alias for compatibility
   status: 'pending' | 'completed' | 'cancelled';
   notes: string;
-  created_at?: Date;
-  createdAt?: string; // Alias for compatibility
+  created_at?: Date | string;
+  createdAt?: string | Date; // Alias for compatibility
   customerId: string;
   items: {
     productId: string;
@@ -281,7 +282,7 @@ export interface UserSlot {
   accessLevel: 'admin' | 'standard';
   profileSettings: {
     restrictions: string[];
-    customSettings: { [key: string]: any };
+  customSettings: { [key: string]: unknown };
   };
   isActive: boolean;
   joinedDate: Date;

@@ -4,6 +4,7 @@ import { AccountItem, Category, CreateOrderModalProps, Customer, DatabaseAccount
 
 // Using direct API fetch with fallback to local mock data
 import { fetchCategories } from '../api/Categories';
+import { useNotifications } from '../context/useNotifications';
 
 // Type definition for database account structure
 
@@ -14,6 +15,17 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   existingCustomers,
   prefilledItems = []
 }) => {
+  const { warning: notifyWarning } = useNotifications();
+  // Ensure unique existing customers by email to avoid duplicate keys/options
+  const uniqueCustomers = React.useMemo(() => {
+    const map = new Map<string, Customer>();
+    for (const c of existingCustomers) {
+      if (c && typeof c.email === 'string' && !map.has(c.email)) {
+        map.set(c.email, c);
+      }
+    }
+    return Array.from(map.values());
+  }, [existingCustomers]);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -42,6 +54,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   // Add state for days until renewal
   const [daysUntilRenewal, setDaysUntilRenewal] = useState<number>(30);
+  // Lifetime (no expiry) option
+  const [lifetime, setLifetime] = useState<boolean>(false);
 
   // Add function to calculate days until renewal
   const calculateDaysUntilRenewal = (startDateStr: string, endDateStr: string) => {
@@ -324,7 +338,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   };
 
   const handleExistingCustomerSelect = (customerId: string) => {
-    const customer = existingCustomers.find(c => c.id === customerId);
+    const customer = uniqueCustomers.find(c => c.id === customerId);
     if (customer) {
       // Get discount rate from reseller info if available
       const discountRate = customer.customerType === 'reseller' && customer.resellerInfo 
@@ -337,7 +351,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
-        // customerType: customer.customerType,
+        customerType: customer.customerType,
         discountRate
       }));
     }
@@ -444,12 +458,17 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     const totalAmount = calculateTotal();
 
     // Calculate final values for the order
-    const orderSubtotal = subtotal;
-    const orderDiscountAmount = discountAmount;
+    // const orderSubtotal = subtotal;
+    // const orderDiscountAmount = discountAmount;
     // const orderDiscountRate = customerInfo.discountRate;
 
+    // Lifetime handling: if lifetime, omit endDate and daysUntilRenewal
+    const computedEndDate = lifetime ? undefined : (endDate || undefined);
+    const computedDaysUntilRenewal = lifetime ? undefined : (daysUntilRenewal || undefined);
+
     const orderData = {
-      customerId: customerInfo.isExisting ? customerInfo.existingCustomerId : undefined,
+      // Do NOT send customerId when selecting existing customer; backend expects FK id, not email
+      // Leave undefined so it will be omitted and stored as NULL
       customerName: customerInfo.name || undefined,
       customerEmail: customerInfo.email || undefined,
       customerPhone: customerInfo.phone || undefined,
@@ -470,8 +489,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       status: 'completed',
       notes: '', // Add notes if needed
       startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      daysUntilRenewal: daysUntilRenewal || undefined,
+      endDate: computedEndDate,
+      daysUntilRenewal: computedDaysUntilRenewal,
     };
      console.log('Final Order Data being sent:', orderData );
     console.log('Customer Type in payload:' , orderData.customerType);
@@ -543,8 +562,8 @@ onClose();
                   }`}
                 >
                   <option value="">Choose a customer...</option>
-                  {existingCustomers.map(customer => (
-                    <option key={customer.id} value={customer.id}>
+                  {uniqueCustomers.map(customer => (
+                    <option key={customer.email} value={customer.id}>
                       {customer.name} - {customer.email}
                     </option>
                   ))}
@@ -736,8 +755,8 @@ onClose();
                               // Add to order
                               handleAccountSelect(account.id);
                             } else {
-                              // Alert that this account is full
-                              alert(`This ${account.productName} account has no available slots. Please choose another account.`);
+                              // Notify user that this account is full
+                              notifyWarning(`This ${account.productName} account has no available slots. Please choose another account.`, 'No available slots');
                             }
                           }
                         }}
@@ -1078,7 +1097,8 @@ onClose();
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full p-2.5 bg-slate-600 text-white border border-slate-600 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                  required
+                  required={!lifetime}
+                  disabled={lifetime}
                 />
               </div>
               <div>
@@ -1089,7 +1109,6 @@ onClose();
                   <input
                     type="number"
                     min="0"
-                    max="365"
                     value={daysUntilRenewal}
                     onChange={(e) => {
                       const days = parseInt(e.target.value) || 0;
@@ -1104,6 +1123,7 @@ onClose();
                     }}
                     className="w-full p-2.5 bg-slate-600 text-white border border-slate-600 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                     placeholder="30"
+                    disabled={lifetime}
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <span className="text-gray-400 text-sm">days</span>
@@ -1113,6 +1133,24 @@ onClose();
                   Auto-calculated from dates or manually entered
                 </p>
               </div>
+            </div>
+            {/* Lifetime toggle */}
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                id="lifetime"
+                type="checkbox"
+                className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 focus:ring-blue-500"
+                checked={lifetime}
+                onChange={(e) => {
+                  const isLifetime = e.target.checked;
+                  setLifetime(isLifetime);
+                  if (isLifetime) {
+                    setEndDate('');
+                    setDaysUntilRenewal(0);
+                  }
+                }}
+              />
+              <label htmlFor="lifetime" className="text-sm text-gray-300">No expiry (Lifetime)</label>
             </div>
             <div className="bg-slate-600 rounded-lg p-3">
               <div className="flex items-center justify-between">

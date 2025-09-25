@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNotifications } from '../context/useNotifications';
 import { 
   Plus, 
   Search, 
@@ -16,7 +17,7 @@ import {
   AlertTriangle,
   X
 } from '../utils/icons'; // Use centralized imports
-import { CreateSaleData, Sale, Invoice } from '../types/index'; // Customer import removed - using sales only
+import { CreateSaleData, Sale, Invoice, Customer } from '../types/index';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CreateOrderModal } from './CreateOrderModal';
 import { InvoiceManagement } from './InvoiceManagement';
@@ -26,6 +27,20 @@ import { CreateInvoiceModal } from './CreateInvoiceModal';
 const API_BASE = 'http://localhost:3001/api';
 
 // No fallback data - we'll use only real data from the database
+
+// Helper to fetch customers
+const useLoadCustomers = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const data = await fetchCustomers();
+      if (mounted) setCustomers(data);
+    })();
+    return () => { mounted = false; };
+  }, []);
+  return customers;
+};
 
 // No flags for API availability - we'll always use real data
 const fetchSales = async (params?: Record<string, string | number | boolean>): Promise<Sale[]> => {
@@ -45,8 +60,8 @@ const fetchSales = async (params?: Record<string, string | number | boolean>): P
     
     const responseData = await response.json();
     
-    // Handle different response formats
-    let data: any[] = [];
+  // Handle different response formats
+  let data: Sale[] = [];
     if (Array.isArray(responseData)) {
       data = responseData;
     } else if (responseData && Array.isArray(responseData.items)) {
@@ -74,28 +89,58 @@ const fetchSales = async (params?: Record<string, string | number | boolean>): P
   }
 };
 
-// Example update for the fetch customers function
-/* 
-const fetchCustomers = async () => {
-  console.log("Fetching customers from API...");
+// Customers: fetch from API so CreateOrderModal can show existing customers
+const fetchCustomers = async (): Promise<Customer[]> => {
+  console.log('Fetching customers from API...');
   try {
-    const response = await fetch("http://localhost:3001/api/customers");
-    
+    const response = await fetch('http://localhost:3001/api/customers');
     if (!response.ok) {
       throw new Error(`Customers API error: ${response.status} ${response.statusText}`);
     }
-    
     const data = await response.json();
-    console.log("Successfully loaded customers from API:", data.length);
-    return data;
+    console.log('Successfully loaded customers from API:', data.length);
+    // Basic normalization to match Customer type
+    type ApiCustomer = {
+      id?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      customer_email?: string;
+      customer_name?: string;
+      customer_phone?: string;
+      total_spent?: number | string;
+      total_orders?: number | string;
+      first_order_date?: string;
+      last_order_date?: string;
+      customer_type?: string;
+      [key: string]: unknown;
+    };
+    const mapped = (data as ApiCustomer[] || []).map((c, idx) => ({
+      // Use a stable id for UI only; backend FK is not available here
+      id: (c.id || c.customer_email || c.email || `cust-${idx}`) as string,
+      name: (c.customer_name || c.name || '') as string,
+      email: (c.customer_email || c.email || '') as string,
+      phone: (c.customer_phone || c.phone || '') as string,
+      totalSpent: Number(c.total_spent) || 0,
+      totalOrders: Number(c.total_orders) || 0,
+      createdAt: c.first_order_date ? new Date(c.first_order_date) : new Date(),
+      lastOrderDate: c.last_order_date ? new Date(c.last_order_date) : null,
+      preferredProducts: [],
+      customerType: (c.customer_type === 'reseller' ? 'reseller' : 'standard') as 'standard' | 'reseller',
+    } as Customer));
+    // Dedupe by email to avoid duplicate entries
+    const byEmail = new Map<string, Customer>();
+    for (const cust of mapped) {
+      if (cust.email && !byEmail.has(cust.email)) {
+        byEmail.set(cust.email, cust);
+      }
+    }
+    return Array.from(byEmail.values());
   } catch (error) {
-    console.error("Error fetching customers:", error);
-    return [];  // Return empty array rather than crashing
+    console.error('Error fetching customers:', error);
+    return [];
   }
 };
-*/
-
-// Customer functionality removed - using sales data only
 
 
 
@@ -180,13 +225,13 @@ const createSale = async (saleData: CreateSaleData): Promise<Sale> => {
     const actualSaleData = data.data || data;
     
     return actualSaleData as Sale;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating sale:', error);
-    throw error;
+    throw error as Error;
   }
 };
 
-const updateSale = async (order_number: string, saleData: any): Promise<Sale> => {
+const updateSale = async (order_number: string, saleData: Record<string, unknown>): Promise<Sale> => {
    try {
     // ✅ Ensure the order_number is properly encoded and not empty
     if (!order_number || order_number.trim() === '') {
@@ -249,9 +294,9 @@ const updateSale = async (order_number: string, saleData: any): Promise<Sale> =>
     console.log('Sale updated successfully via API:', data);
     
     return data as Sale;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating sale:', error);
-    throw error;
+    throw error as Error;
   }
 };
 
@@ -291,9 +336,9 @@ const deleteSale = async (order_number: string): Promise<void> => {
     }
     
     console.log('Sale deleted successfully via API');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting sale:', error);
-    throw error;
+    throw error as Error;
   }
 };
 
@@ -301,8 +346,17 @@ const deleteSale = async (order_number: string): Promise<void> => {
 interface EditOrderModalProps {
   order: Sale;
   onClose: () => void;
-  onSave: (updatedOrder: any) => void;
+  onSave: (updatedOrder: EditOrderFormData) => void;
 }
+
+type EditOrderFormData = {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  payment_method: 'cash' | 'bank_transfer';
+  status: 'pending' | 'completed' | 'cancelled';
+  notes: string;
+};
 
 const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -315,14 +369,14 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    onSave(formData as EditOrderFormData);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-2xl">
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-white">Edit Order {order.orderNumber || order.order_number}</h2>
+          <h2 className="text-xl font-semibold text-white">Edit Order {order.order_number}</h2>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
             <X size={20} />
           </button>
@@ -366,7 +420,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
               <label className="block text-sm font-medium text-gray-300 mb-2">Payment Method</label>
               <select
                 value={formData.payment_method}
-                onChange={(e) => setFormData(prev => ({ ...prev, payment_method: e.target.value as any }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, payment_method: e.target.value as 'cash' | 'bank_transfer' }))}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="cash">Cash</option>
@@ -378,7 +432,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
               <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'pending' | 'completed' | 'cancelled' }))}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="pending">Pending</option>
@@ -421,6 +475,8 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, onSave 
 };
 
 export const SalesManagement: React.FC = () => {
+  const customersForOrders = useLoadCustomers();
+  const { success, error: errorToast, confirm, warning } = useNotifications();
   const [sales, setSales] = useState<Sale[]>([]); // Initialize with empty array
   // const [customers, setCustomers] = useState<Customer[]>([]); // Customer data removed - using sales only
   const [loading, setLoading] = useState(true); // Start with true to show loading indicator
@@ -437,36 +493,23 @@ export const SalesManagement: React.FC = () => {
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Load data when component mounts
-    loadData();
-  }, []);
-
-  // Reload data when filters change
-  useEffect(() => {
-    loadData();
-  }, [filterStatus, searchTerm, sortBy, sortOrder]);
-
   const [apiStatus, setApiStatus] = useState<{isConnected: boolean; message?: string}>({ isConnected: false });
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Loading sales data...');
-      
       const salesData = await fetchSales({
         status: filterStatus === 'all' ? filterStatus : filterStatus,
         search: searchTerm || '',
         sortBy: sortBy === 'date' ? 'order_date' : sortBy,
         sortOrder
       });
-      
       console.log(`Loaded ${salesData.length} sales`);
       setSales(salesData);
       setApiStatus({ isConnected: true });
     } catch (error) {
       console.error('Error loading data:', error);
-      // Set empty arrays when there's an error
       setSales([]);
       setApiStatus({ 
         isConnected: false, 
@@ -476,6 +519,18 @@ export const SalesManagement: React.FC = () => {
       setLoading(false);
     }
   }, [filterStatus, searchTerm, sortBy, sortOrder]);
+
+  useEffect(() => {
+    // Load data when component mounts
+    loadData();
+  }, [loadData]);
+
+  // Reload data when filters change
+  useEffect(() => {
+    loadData();
+  }, [filterStatus, searchTerm, sortBy, sortOrder, loadData]);
+
+  
 
   const retryApiConnection = async () => {
     await loadData();
@@ -528,12 +583,13 @@ export const SalesManagement: React.FC = () => {
 
     // Apply sorting
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: number | string | Date;
+      let bValue: number | string | Date;
 
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.order_date);
-          bValue = new Date(b.order_date);
+          aValue = new Date(a.order_date as string);
+          bValue = new Date(b.order_date as string);
           break;
         case 'amount':
           aValue = a.total_amount;
@@ -548,8 +604,8 @@ export const SalesManagement: React.FC = () => {
           bValue = b.order_number;
           break;
         default:
-          aValue = new Date(a.created_at || a.order_date);
-          bValue = new Date(b.created_at || b.order_date);
+      aValue = new Date((a.created_at as string) || (a.order_date as string));
+      bValue = new Date((b.created_at as string) || (b.order_date as string));
       }
 
       if (sortOrder === 'desc') {
@@ -564,11 +620,11 @@ export const SalesManagement: React.FC = () => {
 
   const filteredSales = getFilteredSales();
 
-  const handleCreateOrder = async (orderData: any) => {
+  const handleCreateOrder = async (orderData: CreateSaleData) => {
     try {
       console.log('Creating order with data:', orderData);
 
-         const formattedItems = (orderData.items || []).map((item: any) => ({
+         const formattedItems = (orderData.items || []).map((item: {productId?: string; productName?: string; price?: number; quantity?: number; email?: string}) => ({
           productId: item.productId,
           productName: item.productName,
           price: parseFloat(item.price?.toString() || '0'),
@@ -594,79 +650,62 @@ export const SalesManagement: React.FC = () => {
       
       console.log('Order created successfully:', newSale);
       
-      // Ensure newSale has the expected structure - cast to any to handle dynamic properties
-      const rawSale = newSale as any;
-      const saleToAdd = {
-        ...newSale,
-        items: newSale.items || orderData.items || [],
-        orderNumber: newSale.order_number || rawSale.order_number || `#${Math.floor(10000 + Math.random() * 90000)}`,
-        totalAmount: newSale.totalAmount || rawSale.total_amount || orderData.totalAmount || 0,
-        customerName: newSale.customerName || rawSale.customer_name || orderData.customerName,
-        customerEmail: newSale.customerEmail || rawSale.customer_email || orderData.customerEmail,
-        customerPhone: newSale.customerPhone || rawSale.customer_phone || orderData.customerPhone,
-        paymentMethod: newSale.paymentMethod || rawSale.payment_method || orderData.paymentMethod || 'cash',
-        orderDate: newSale.orderDate || rawSale.order_date || new Date().toISOString(),
-        createdAt: newSale.createdAt || rawSale.created_at || new Date().toISOString(),
-        id: newSale.order_number || Math.random().toString(36).substr(2, 9)
-      };
-      
-      setSales(prev => [saleToAdd, ...prev]);
-      
       // Create account orders for each account in the items (if dates are provided)
-      if (orderData.startDate && orderData.endDate && saleToAdd.id) {
+  const saleId = (newSale as unknown as { id?: string }).id || newSale.order_number;
+      if (orderData.startDate && orderData.endDate && saleId) {
         try {
           // Import AccountOrders module dynamically to avoid circular dependencies
           const AccountOrdersAPI = await import('../api/AccountOrders');
           
           // Process each item in the order to create account orders
-          for (const item of orderData.items) {
+          for (const item of (orderData.items || [])) {
             await AccountOrdersAPI.createAccountOrder({
-              sales_id: saleToAdd.id,
-              account_id: item.productId,
+              sales_id: saleId,
+              account_id: String(item.productId || ''),
               start_date: orderData.startDate,
               end_date: orderData.endDate,
-              quantity: item.quantity,
-              unit_price: item.price
+              quantity: Number(item.quantity || 1),
+              unit_price: Number(item.price || 0)
             });
           }
-          console.log('Account orders created successfully');
-          
-          // Show success message with account period info
-          alert(`Order #${saleToAdd.orderNumber} has been successfully created with account period tracking from ${orderData.startDate} to ${orderData.endDate}!`);
-        } catch (accountOrderError: any) {
+    console.log('Account orders created successfully');
+    success(`Order #${newSale.order_number} created with tracking from ${orderData.startDate} to ${orderData.endDate}.`, 'Order saved');
+  } catch (accountOrderError: unknown) {
           console.error('Error creating account orders:', accountOrderError);
           
           // Provide specific error messages based on the error type
           let errorMessage = 'Unknown error occurred while setting up account periods.';
           
-          if (accountOrderError?.message?.includes('endpoint not found')) {
+          if (accountOrderError instanceof Error && accountOrderError.message.includes('endpoint not found')) {
             errorMessage = 'Account period tracking is not available yet. The server needs to implement the account-orders API endpoint.';
-          } else if (accountOrderError?.message?.includes('<!DOCTYPE')) {
+          } else if (accountOrderError instanceof Error && accountOrderError.message.includes('<!DOCTYPE')) {
             errorMessage = 'Server returned an HTML page instead of API response. The account-orders endpoint may not exist.';
-          } else if (accountOrderError?.message) {
+          } else if (accountOrderError instanceof Error && accountOrderError.message) {
             errorMessage = accountOrderError.message;
           }
           
-          alert(`Order #${saleToAdd.orderNumber} was saved successfully, but account period tracking failed: ${errorMessage}`);
+          warning(`Order #${newSale.order_number} saved, but account tracking failed: ${errorMessage}`, 'Partial success');
         }
       } else {
         // Show success message without account period info
-        alert(`Order #${saleToAdd.orderNumber} has been successfully created and saved to the database!`);
+        success(`Order #${newSale.order_number} created and saved to the database.`, 'Order saved');
       }
       
       setShowCreateOrder(false);
-    } catch (error: any) {
+      await loadData();
+    } catch (error: unknown) {
       console.error('Error creating order:', error);
-      alert(`Failed to create order: ${error?.message || 'Unknown error'}`);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      errorToast(`Failed to create order: ${msg}`, 'Error');
     }
   };
 
-  const handleEditOrder = async (updatedData: any) => {
+  const handleEditOrder = async (updatedData: EditOrderFormData) => {
     if (!editingOrder) return;
     
-    try {
+  try {
 
-      const orderId = editingOrder.order_number || (editingOrder as any).order_number;
+  const orderId = editingOrder.order_number;
       console.log('Updating order:', editingOrder.order_number, 'with data:', updatedData);
       
       
@@ -676,34 +715,44 @@ export const SalesManagement: React.FC = () => {
     }
 
       const updated = await updateSale(orderId, updatedData);
-      console.log('Order updated successfully:', updated);
+  console.log('Order updated successfully:', updated);
+  success(`Order #${orderId} updated successfully.`, 'Order updated');
       
       setSales(prev => prev.map(sale => 
         sale.order_number === orderId ? { ...sale, ...updated } : sale
       ));
       setEditingOrder(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating order:', error);
-      alert(`Failed to update order: ${error?.message || 'Unknown error'}`);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      errorToast(`Failed to update order: ${msg}`, 'Error');
     }
   };
 
   const handleDeleteOrder = async (order_number: string) => {
     try {
       console.log('Deleting order:', order_number);
-      
+      const ok = await confirm({
+        title: 'Delete order',
+        message: `Are you sure you want to delete order #${order_number}? This action cannot be undone.`,
+        tone: 'danger',
+        confirmText: 'Delete',
+      });
+      if (!ok) return;
+
       await deleteSale(order_number);
       console.log('Order deleted successfully');
-      
+      success(`Order #${order_number} deleted.`, 'Deleted');
       setSales(prev => prev.filter(sale => sale.order_number !== order_number));
       setShowDeleteConfirm(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting order:', error);
-      alert(`Failed to delete order: ${error.message}`);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      errorToast(`Failed to delete order: ${msg}`, 'Error');
     }
   };
 
-  const handleReorder = (sale: Sale) => {
+  const handleReorder = () => {
     // This would typically open the create order modal with the sale data pre-filled
     setShowCreateOrder(true);
   };
@@ -965,7 +1014,7 @@ export const SalesManagement: React.FC = () => {
                         <Edit size={16} className="sm:w-[18px] sm:h-[18px]" />
                       </button>
                       <button
-                        onClick={() => handleReorder(sale)}
+                        onClick={handleReorder}
                         className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded-lg transition-colors"
                         title="Reorder"
                       >
@@ -1063,8 +1112,6 @@ export const SalesManagement: React.FC = () => {
         </div>
       )}
 
-      Edit Order Modal
-
       {editingOrder && (
         <EditOrderModal
           order={editingOrder}
@@ -1078,7 +1125,7 @@ export const SalesManagement: React.FC = () => {
         <CreateOrderModal
           onClose={() => setShowCreateOrder(false)}
           onCreateOrder={handleCreateOrder}
-          existingCustomers={[]} /* Customers functionality removed - using empty array */
+          existingCustomers={customersForOrders}
         />
       )}
 

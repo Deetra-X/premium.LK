@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotifications } from '../context/useNotifications';
 import { 
   Plus, 
   Search, 
@@ -25,6 +26,7 @@ import { createRoot } from 'react-dom/client';
 import InvoiceBody from './InvoiceBody';
 
 export const InvoiceManagement: React.FC = () => {
+  const { error: notifyError, success: notifySuccess, info: notifyInfo } = useNotifications();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +39,7 @@ export const InvoiceManagement: React.FC = () => {
   // Load invoices on component mount
   useEffect(() => {
     loadInvoices();
-  }, []);
+  }, [/* eslint-disable-line react-hooks/exhaustive-deps */]);
 
   const loadInvoices = async () => {
     try {
@@ -58,7 +60,7 @@ export const InvoiceManagement: React.FC = () => {
     } catch (error) {
       console.error('❌ Error loading invoices:', error);
       setInvoices([]);
-      alert('❌ Failed to load invoices. Please refresh the page.');
+      notifyError('❌ Failed to load invoices. Please refresh the page.', 'Load error');
     } finally {
       setLoading(false);
     }
@@ -98,11 +100,11 @@ export const InvoiceManagement: React.FC = () => {
     try {
       console.log(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
       setInvoices(prev => [invoice, ...prev]);
-      alert(`✅ Invoice ${invoice.invoiceNumber} created successfully!`);
+      notifySuccess(`✅ Invoice ${invoice.invoiceNumber} created successfully!`, 'Invoice created');
       await loadInvoices();
     } catch (error) {
       console.error('❌ Error handling created invoice:', error);
-      alert('❌ Error occurred while processing the invoice.');
+      notifyError('❌ Error occurred while processing the invoice.', 'Invoice error');
     }
   };
 
@@ -182,7 +184,7 @@ export const InvoiceManagement: React.FC = () => {
         .save();
     } catch (e) {
       console.error('PDF generation failed', e);
-      alert('Failed to generate PDF. Please try again.');
+      notifyError('Failed to generate PDF. Please try again.', 'PDF error');
     } finally {
       if (root) root.unmount();
       if (container && container.parentNode) container.parentNode.removeChild(container);
@@ -472,7 +474,7 @@ export const InvoiceManagement: React.FC = () => {
                           <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
                         </button>
                         <button
-                          onClick={() => alert('Email functionality would be implemented here')}
+                          onClick={() => notifyInfo('Email functionality would be implemented here', 'Info')}
                           className="p-2 text-purple-400 hover:text-purple-300 hover:bg-slate-600 rounded-lg transition-colors"
                           title="Send Email"
                         >

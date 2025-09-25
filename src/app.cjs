@@ -2,6 +2,8 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 // Centralized DB pool (shared across backend)
 const db = require('../backend/db');
 const app = express();
@@ -18,6 +20,20 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http:
   .map(s => s.trim())
   .filter(Boolean);
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// Security headers
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false, // customize if you add inline scripts; consider enabling with a CSP later
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Basic rate limiting for API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+});
+app.use('/api', apiLimiter);
 
 app.use(express.json());
 
@@ -97,6 +113,14 @@ app.get('/test-db', async (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
   app.use(express.static(distPath, { index: false }));
+  // Optional HTTPS redirect when behind a proxy/load balancer
+  app.use((req, res, next) => {
+    const proto = req.headers['x-forwarded-proto'];
+    if (proto && proto !== 'https') {
+      return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
   // SPA fallback
   app.get(/^\/(?!api\/).*/i, (_req, res) => 
     res.sendFile(path.join(distPath, 'index.html')));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Filter, 
@@ -11,16 +11,67 @@ import {
   TrendingUp,
   Package,
   Eye,
-  UserPlus,
   Star,
   Clock
 } from 'lucide-react';
-import { Customer, Sale } from '../types/index';
+import { Customer, Sale, OrderItem, CreateSaleData } from '../types/index';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CustomerProfileModal } from './CustomerProfileModal';
 import { CreateOrderModal } from './CreateOrderModal';
 
 export const CustomersManagement: React.FC = () => {
+  // API response helper types (narrowed to fields we actually use)
+  type ApiItem = {
+    productId?: string;
+    product_id?: string;
+    productName?: string;
+    product_name?: string;
+    price?: number | string;
+    quantity?: number | string;
+  };
+  type ApiSale = {
+    id?: string | number;
+    order_number?: string;
+    customer_name?: string;
+    customer_email?: string;
+    customer_phone?: string;
+    items?: string | ApiItem[];
+    total_amount?: string | number;
+    payment_method?: string;
+    order_date?: string;
+    status?: string;
+  };
+  type ApiCustomer = {
+    customer_name?: string;
+    customer_email?: string;
+    customer_phone?: string;
+    total_spent?: string | number;
+    total_orders?: string | number;
+    customer_type?: string;
+    first_order_date?: string;
+    last_order_date?: string | null;
+  };
+
+  const parseApiItems = useCallback((raw: unknown): Sale['items'] => {
+    let arr: unknown = raw;
+    if (typeof arr === 'string') {
+      try {
+        arr = JSON.parse(arr);
+      } catch {
+        return [];
+      }
+    }
+    if (Array.isArray(arr)) {
+      return (arr as ApiItem[]).map((it) => ({
+        productId: (it.productId || it.product_id || '') as string,
+        productName: (it.productName || it.product_name || '') as string,
+        price: Number(it.price ?? 0),
+        quantity: Number(it.quantity ?? 1),
+      }));
+    }
+    return [];
+  }, []);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +83,7 @@ export const CustomersManagement: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCreateOrder, setShowCreateOrder] = useState(false);
-  const [reorderItems, setReorderItems] = useState<any[]>([]);
+  const [reorderItems, setReorderItems] = useState<OrderItem[]>([]);
 
   // useEffect(() => {
   //   const loadData = async () => {
@@ -46,17 +97,17 @@ export const CustomersManagement: React.FC = () => {
   
     useEffect(() => {
                // Helper function to extract preferred products from sales data
-  const getPreferredProductsFromSales = (customerEmail: string, salesData: any[]): string[] => {
+  const getPreferredProductsFromSales = (customerEmail: string, salesData: ApiSale[]): string[] => {
     const customerSales = salesData.filter(sale => sale.customer_email === customerEmail);
     const productCounts: { [key: string]: number } = {};
 
     customerSales.forEach(sale => {
       if (sale.items) {
         try {
-          const items = typeof sale.items === 'string' ? JSON.parse(sale.items) : sale.items;
+          const items = parseApiItems(sale.items) as OrderItem[];
           if (Array.isArray(items)) {
-            items.forEach((item: any) => {
-              const productName = item.productName || item.name || item.product_name;
+            items.forEach((item) => {
+              const productName = item.productName;
               if (productName) {
                 productCounts[productName] = (productCounts[productName] || 0) + (item.quantity || 1);
               }
@@ -68,7 +119,7 @@ export const CustomersManagement: React.FC = () => {
       }
     });
 
-    return Object.entries(productCounts)
+    return (Object.entries(productCounts) as Array<[string, number]>)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 5)
       .map(([product]) => product);
@@ -88,40 +139,52 @@ export const CustomersManagement: React.FC = () => {
           throw new Error('Failed to fetch data from API');
         }
 
-        const customersData = await customersResponse.json();
-        const salesData = await salesResponse.json();
+  const customersData: ApiCustomer[] = await customersResponse.json();
+  const salesData: ApiSale[] = await salesResponse.json();
 
         // Transform API data to match frontend Customer interface
-        const transformedCustomers: Customer[] = customersData.map((apiCustomer: any) => ({
+        const transformedCustomers: Customer[] = customersData.map((apiCustomer) => ({
           id: `${apiCustomer.customer_email}`, // Use email as unique ID
           name: apiCustomer.customer_name || '',
           email: apiCustomer.customer_email || '',
           phone: apiCustomer.customer_phone || '',
-          totalSpent: parseFloat(apiCustomer.total_spent) || 0,
-          totalOrders: parseInt(apiCustomer.total_orders) || 0,
+          totalSpent: Number(apiCustomer.total_spent ?? 0),
+          totalOrders: Number(apiCustomer.total_orders ?? 0),
           customerType: apiCustomer.customer_type === 'reseller' ? 'reseller' : 'standard',
           createdAt: apiCustomer.first_order_date ? new Date(apiCustomer.first_order_date) : new Date(),
           lastOrderDate: apiCustomer.last_order_date ? new Date(apiCustomer.last_order_date) : null,
-          preferredProducts: getPreferredProductsFromSales(apiCustomer.customer_email, salesData)
+          preferredProducts: getPreferredProductsFromSales(apiCustomer.customer_email || '', salesData)
         }));
+
+        // Deduplicate by email to ensure stable, unique keys in UI
+        const dedupedCustomers: Customer[] = Array.from(
+          new Map(transformedCustomers.map(c => [c.email, c])).values()
+        );
 
 
   // Transform sales data to match frontend Sale interface
-  const transformedSales: Sale[] = salesData.map((apiSale: any) => ({
-          id: apiSale.id?.toString() || Date.now().toString(),
-          orderNumber: apiSale.order_number || `ORD-${Date.now()}`,
-          customerId: apiSale.customer_email, // Match with customer ID
+  const transformedSales: Sale[] = salesData.map((apiSale) => ({
+          id: (apiSale.id?.toString?.() || String(apiSale.id) || Date.now().toString()),
+          order_number: apiSale.order_number || `ORD-${Date.now()}`,
+          customerId: apiSale.customer_email || '',
+          customer_name: apiSale.customer_name || '',
           customerName: apiSale.customer_name || '',
+          customer_email: apiSale.customer_email || '',
           customerEmail: apiSale.customer_email || '',
+          customer_phone: apiSale.customer_phone || '',
           customerPhone: apiSale.customer_phone || '',
-          items: Array.isArray(apiSale.items) ? apiSale.items : [],
-          totalAmount: parseFloat(apiSale.total_amount) || 0,
-          paymentMethod: apiSale.payment_method || 'cash',
-          orderDate: new Date(apiSale.order_date),
-          status: apiSale.status || 'completed'
+          items: parseApiItems(apiSale.items),
+          total_amount: Number(apiSale.total_amount ?? 0),
+          totalAmount: Number(apiSale.total_amount ?? 0),
+          payment_method: (apiSale.payment_method as 'cash' | 'bank_transfer') || 'cash',
+          paymentMethod: (apiSale.payment_method as 'cash' | 'bank_transfer') || 'cash',
+          order_date: apiSale.order_date || new Date().toISOString(),
+          orderDate: apiSale.order_date ? new Date(apiSale.order_date) : new Date(),
+          status: (apiSale.status as 'pending' | 'completed' | 'cancelled') || 'completed',
+          notes: ''
         }));
 
-        setCustomers(transformedCustomers);
+  setCustomers(dedupedCustomers);
         setSales(transformedSales);
         setError(null);
         
@@ -144,35 +207,39 @@ export const CustomersManagement: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [parseApiItems]);
 
   // Function to automatically create or update customer profile
-  const createOrUpdateCustomerProfile = async (saleData: any) => {
+  const createOrUpdateCustomerProfile = async (saleData: CreateSaleData) => {
     const existingCustomer = customers.find(c => c.email === saleData.customerEmail);
     
     if (existingCustomer) {
       // Update existing customer
       const updatedCustomer: Customer = {
         ...existingCustomer,
-        totalSpent: existingCustomer.totalSpent + saleData.totalAmount,
+        totalSpent: existingCustomer.totalSpent + (saleData.totalAmount ?? 0),
         totalOrders: existingCustomer.totalOrders + 1,
         lastOrderDate: new Date(),
-        preferredProducts: updatePreferredProducts(existingCustomer.preferredProducts || [], saleData.items)
+        preferredProducts: updatePreferredProducts(existingCustomer.preferredProducts || [], (saleData.items || []) as OrderItem[])
       };
       
       setCustomers(prev => prev.map(c => c.id === existingCustomer.id ? updatedCustomer : c));
     } else {
       // Create new customer profile
+      const email = saleData.customerEmail ?? '';
+      const name = saleData.customerName ?? '';
+      const phone = saleData.customerPhone ?? '';
+      const amount = saleData.totalAmount ?? 0;
       const newCustomer: Customer = {
-        id: Date.now().toString(),
-        name: saleData.customerName,
-        email: saleData.customerEmail,
-        phone: saleData.customerPhone,
-        totalSpent: saleData.totalAmount,
+        id: email || `generated-${Date.now()}`, // keep email as stable ID when present
+        name,
+        email,
+        phone,
+        totalSpent: amount,
         totalOrders: 1,
         createdAt: new Date(),
         lastOrderDate: new Date(),
-        preferredProducts: saleData.items.map((item: any) => item.productName),
+        preferredProducts: (saleData.items || []).map((item) => (item?.productName || '')),
         customerType: 'standard'
       };
       
@@ -182,22 +249,34 @@ export const CustomersManagement: React.FC = () => {
     // Add the sale to sales data
     const newSale: Sale = {
       id: Date.now().toString(),
-      orderNumber: `ORD-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
-      customerId: existingCustomer?.id || Date.now().toString(),
-      customerName: saleData.customerName,
-      customerEmail: saleData.customerEmail,
-      customerPhone: saleData.customerPhone,
-      items: saleData.items,
-      totalAmount: saleData.totalAmount,
-      paymentMethod: saleData.paymentMethod,
+      order_number: `ORD-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      customerId: saleData.customerEmail || '', // align with customer id scheme (email)
+      customer_name: saleData.customerName || '',
+      customerName: saleData.customerName || '',
+      customer_email: saleData.customerEmail || '',
+      customerEmail: saleData.customerEmail || '',
+      customer_phone: saleData.customerPhone || '',
+      customerPhone: saleData.customerPhone || '',
+      items: (saleData.items || []).map((it) => ({
+        productId: (it.productId || it.product_id || '')!,
+        productName: (it.productName || it.product_name || '')!,
+        price: Number(it.price ?? 0),
+        quantity: Number(it.quantity ?? 1),
+      })),
+      total_amount: saleData.totalAmount ?? 0,
+      totalAmount: saleData.totalAmount ?? 0,
+      payment_method: (saleData.paymentMethod || saleData.payment_method || 'cash') as 'cash' | 'bank_transfer',
+      paymentMethod: (saleData.paymentMethod || saleData.payment_method || 'cash') as 'cash' | 'bank_transfer',
+      order_date: new Date().toISOString(),
       orderDate: new Date(),
-      status: 'completed'
+      status: 'completed',
+      notes: saleData.notes ?? ''
     };
     
     setSales(prev => [newSale, ...prev]);
   };
 
-  const updatePreferredProducts = (currentProducts: string[], newItems: any[]): string[] => {
+  const updatePreferredProducts = (currentProducts: string[], newItems: OrderItem[]): string[] => {
     const newProductNames = newItems.map(item => item.productName);
     const combined = [...currentProducts, ...newProductNames];
     
@@ -281,19 +360,22 @@ export const CustomersManagement: React.FC = () => {
     // }
       // Apply category filter
   switch (filterBy) {
-    case 'high_value':
+    case 'high_value': {
       filtered = filtered.filter(customer => customer.totalSpent >= 5000);
       break;
-    case 'frequent':
+    }
+    case 'frequent': {
       filtered = filtered.filter(customer => customer.totalOrders >= 3);
       break;
-    case 'recent':
+    }
+    case 'recent': {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       filtered = filtered.filter(customer => 
-        customer.lastOrderDate && customer.lastOrderDate >= thirtyDaysAgo
+        !!customer.lastOrderDate && customer.lastOrderDate >= thirtyDaysAgo
       );
       break;
+    }
   }
 
     // Apply sorting
@@ -301,20 +383,24 @@ export const CustomersManagement: React.FC = () => {
     let comparison = 0;
     
     switch (sortBy) {
-      case 'name':
+      case 'name': {
         comparison = a.name.localeCompare(b.name);
         break;
-      case 'totalSpent':
+      }
+      case 'totalSpent': {
         comparison = a.totalSpent - b.totalSpent;
         break;
-      case 'totalOrders':
+      }
+      case 'totalOrders': {
         comparison = a.totalOrders - b.totalOrders;
         break;
-      case 'lastOrder':
+      }
+      case 'lastOrder': {
         const aDate = a.lastOrderDate?.getTime() || 0;
         const bDate = b.lastOrderDate?.getTime() || 0;
         comparison = aDate - bDate;
         break;
+      }
     }
       
       return sortOrder === 'desc' ? -comparison : comparison;
@@ -325,7 +411,7 @@ export const CustomersManagement: React.FC = () => {
     return sales.filter(sale => sale.customerEmail === customerId || sale.customerId === customerId);
   };
 
-  const getCustomerTier = (customer: Customer): { tier: string; color: string; icon: any } => {
+  const getCustomerTier = (customer: Customer): { tier: string; color: string; icon: React.ElementType } => {
     if (customer.totalSpent >= 10000) {
       return { tier: 'Platinum', color: 'text-purple-400', icon: Star };
     } else if (customer.totalSpent >= 5000) {
@@ -349,13 +435,13 @@ export const CustomersManagement: React.FC = () => {
     setShowProfileModal(true);
   };
 
-  const handleReorder = (items: any[]) => {
+  const handleReorder = (items: OrderItem[]) => {
     setReorderItems(items);
     setShowCreateOrder(true);
     setShowProfileModal(false);
   };
 
-  const handleCreateOrder = (orderData: any) => {
+  const handleCreateOrder = (orderData: CreateSaleData) => {
     createOrUpdateCustomerProfile(orderData);
     setShowCreateOrder(false);
     setReorderItems([]);
@@ -368,7 +454,7 @@ export const CustomersManagement: React.FC = () => {
   const totalRevenue = customers.reduce((sum, customer) => sum + customer.totalSpent, 0);
   const averageSpending = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
   const activeCustomers = customers.filter(customer => {
-    const daysSince = getDaysSinceLastOrder(customer.lastOrderDate);
+    const daysSince = getDaysSinceLastOrder(customer.lastOrderDate ?? undefined);
     return daysSince >= 0 && daysSince <= 30;
   }).length;
 
@@ -469,7 +555,7 @@ export const CustomersManagement: React.FC = () => {
               <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3 sm:w-4 sm:h-4" />
               <select
                 value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value as any)}
+                onChange={(e) => setFilterBy(e.target.value as 'all' | 'high_value' | 'frequent' | 'recent')}
                 className="pl-8 sm:pl-10 pr-6 sm:pr-8 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[120px] sm:min-w-[160px]"
               >
                 <option value="all">All Customers</option>
@@ -481,7 +567,7 @@ export const CustomersManagement: React.FC = () => {
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'totalSpent' | 'totalOrders' | 'lastOrder')}
               className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none min-w-[100px] sm:min-w-[140px]"
             >
               <option value="totalSpent">Sort by Spending</option>
@@ -505,7 +591,7 @@ export const CustomersManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {filteredCustomers.map((customer) => {
           const customerTier = getCustomerTier(customer);
-          const daysSinceLastOrder = getDaysSinceLastOrder(customer.lastOrderDate);
+          const daysSinceLastOrder = getDaysSinceLastOrder(customer.lastOrderDate ?? undefined);
           const TierIcon = customerTier.icon;
 
           return (

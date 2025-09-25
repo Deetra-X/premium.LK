@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNotifications } from '../context/useNotifications';
 import { 
   X, 
   Download, 
@@ -32,6 +33,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   onClose,
   onUpdateStatus
 }) => {
+  const { error: notifyError, info: notifyInfo } = useNotifications();
   const [currentStatus, setCurrentStatus] = useState(invoice.status);
   const companyInfo = getCompanyInfo();
   const printRef = useRef<HTMLDivElement | null>(null);
@@ -137,7 +139,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         .save();
     } catch (e) {
       console.error('PDF generation failed', e);
-      alert('Failed to generate PDF. Please try again.');
+      notifyError('Failed to generate PDF. Please try again.', 'PDF error');
     } finally {
       if (root) root.unmount();
       if (container && container.parentNode) container.parentNode.removeChild(container);
@@ -146,7 +148,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   const handleEmail = () => {
     // In a real application, this would open email client or send email
-    alert('Email functionality would be implemented here');
+    notifyInfo('Email functionality would be implemented here', 'Info');
   };
 
   const getStatusColor = (status: Invoice['status']) => {

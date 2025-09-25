@@ -30,6 +30,7 @@ import { AddAccountModal } from './AddAccountModal';
 import { AccountDetailsModal } from './AccountDetailsModal';
 import { EditAccountModal } from './EditAccountModal';
 import { CategoryManagementModal } from './CategoryManagementModal';
+import { useNotifications } from '../context/useNotifications';
 
 type ViewMode = 'categories' | 'category-detail' | 'grid' | 'list';
 
@@ -49,6 +50,7 @@ export const AccountsManagement: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showEmailDetails, setShowEmailDetails] = useState<{ [key: string]: boolean }>({});
+  const { error: notifyError, success: notifySuccess, warning: notifyWarning, confirm: confirmDialog } = useNotifications();
 
   useEffect(() => {
     loadData();
@@ -304,7 +306,7 @@ export const AccountsManagement: React.FC = () => {
         console.log('✅ Account saved to database');
       } catch (err) {
         console.error('❌ Failed to save account to database:', err);
-        alert('Failed to save changes to the database. Please try again.');
+        notifyError('Failed to save changes to the database. Please try again.', 'Save failed');
       }
     })();
   };
@@ -313,7 +315,12 @@ export const AccountsManagement: React.FC = () => {
     const accountToDelete = accounts.find(acc => acc.id === accountId);
     const accountName = accountToDelete?.productName || 'Unknown Account';
     
-    const confirmed = confirm(`Are you sure you want to permanently delete "${accountName}"? This action cannot be undone.`);
+    const confirmed = await confirmDialog({
+      title: 'Delete account',
+      message: `Are you sure you want to permanently delete "${accountName}"? This action cannot be undone.`,
+      tone: 'danger',
+      confirmText: 'Delete'
+    });
     if (!confirmed) return;
     
     try {
@@ -330,7 +337,7 @@ export const AccountsManagement: React.FC = () => {
     } catch (error) {
       console.error('❌ Failed to delete account:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`❌ Failed to delete account "${accountName}": ${errorMessage}`);
+      notifyError(`❌ Failed to delete account "${accountName}": ${errorMessage}`, 'Delete failed');
     }
   };
 
@@ -357,12 +364,12 @@ export const AccountsManagement: React.FC = () => {
       
       // Show success feedback to user
       setTimeout(() => {
-        alert('Categories updated successfully! 🎉');
+        notifySuccess('Categories updated successfully! 🎉', 'Updated');
       }, 100);
       
     } catch (error) {
       console.error('❌ Error refreshing categories:', error);
-      alert('Categories were updated but there was an issue refreshing the data. Please refresh the page.');
+      notifyWarning('Categories were updated but there was an issue refreshing the data. Please refresh the page.', 'Warning');
     }
   };
 
