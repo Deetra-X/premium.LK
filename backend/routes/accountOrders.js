@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../../src/db'); // Path to the DB file in src folder
+const db = require('../db'); // Centralized backend DB pool
 const { v4: uuidv4 } = require('uuid');
 
 /**

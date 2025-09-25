@@ -45,6 +45,8 @@ function App() {
     saveSession(newSession);
     setLocked(false);
     setLockState(false);
+    // Ensure the first view after login is the dashboard
+    setCurrentView('dashboard');
   };
 
   const handleLogout = () => {

@@ -2,7 +2,8 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const db = require('./db');
+// Centralized DB pool (shared across backend)
+const db = require('../backend/db');
 const app = express();
 
 // Add request logging middleware
@@ -28,7 +29,7 @@ const dashboardRouter = require('./routes/Dashboard');
 const invoicesRouter = require('./routes/Invoices');
 // Import router for account orders
 const accountOrdersRouter = require('../backend/routes/accountOrders');
-// Import backend sales router
+// Import backend sales router (if needed elsewhere)
 const backendSalesRouter = require('../backend/routes/sales');
 
 // Add debugging endpoint
@@ -95,9 +96,8 @@ app.get('/test-db', async (req, res) => {
 // Serve static frontend in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { index: false }));
   // SPA fallback
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
+  app.get(/^\/(?!api\/).*/i, (_req, res) => 
+    res.sendFile(path.join(distPath, 'index.html')));
 }

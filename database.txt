@@ -1,254 +1,166 @@
-CREATE DATABASE POS;
-USE POS;
+-- Make sure we're not colliding with existing tables
+DROP TABLE IF EXISTS `account_credentials`;
+DROP TABLE IF EXISTS `account_orders`;
+DROP TABLE IF EXISTS `sales`;
+DROP TABLE IF EXISTS `invoices`;
+DROP TABLE IF EXISTS `accounts`;
+DROP TABLE IF EXISTS `product_categories`;
 
--- Product Categories Table
-CREATE TABLE product_categories (
-  id VARCHAR(64) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  icon VARCHAR(10) DEFAULT '📱',
-  color VARCHAR(255) DEFAULT 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-  service_types JSON,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  is_active BOOLEAN DEFAULT TRUE
-);
+-- =========================================
+-- product_categories
+-- =========================================
+CREATE TABLE `product_categories` (
+  `id`            varchar(64)   NOT NULL,
+  `name`          varchar(255)  NOT NULL,
+  `description`   text          DEFAULT NULL,
+  `icon`          varchar(10)   DEFAULT NULL,
+  `color`         varchar(255)  DEFAULT 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  `service_types` json          DEFAULT NULL,
+  `created_at`    datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active`     tinyint(1)    DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Customers Table
-CREATE TABLE customers (
-  id VARCHAR(64) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  phone VARCHAR(50),
-  accounts_count INT DEFAULT 0,
-  total_spent DECIMAL(12,2) DEFAULT 0,
-  total_orders INT DEFAULT 0,
-  created_at DATETIME NOT NULL,
-  last_order_date DATETIME,
-  preferred_products TEXT, -- JSON array of product names
-  billing_address_street VARCHAR(255),
-  billing_address_city VARCHAR(100),
-  billing_address_state VARCHAR(100),
-  billing_address_zip_code VARCHAR(20),
-  billing_address_country VARCHAR(100),
-  tax_id VARCHAR(50),
-  customer_type ENUM('standard','reseller') DEFAULT 'standard',
-  reseller_id VARCHAR(64),
-  reseller_discount_rate DECIMAL(5,2),
-  reseller_minimum_order_quantity INT,
-  reseller_special_terms TEXT,
-  reseller_credit_limit DECIMAL(12,2)
-);
+-- =========================================
+-- accounts
+-- =========================================
+CREATE TABLE `accounts` (
+  `email`                       varchar(255) NOT NULL,
+  `product_name`                varchar(255) NOT NULL,
+  `label`                       varchar(255) DEFAULT NULL,
+  `id`                          varchar(64)  DEFAULT NULL,
+  `renewal_status`              enum('renewable','non-renewable','expired') DEFAULT 'renewable',
+  `days_until_renewal`          int          DEFAULT NULL,
+  `cost`                        decimal(12,2) NOT NULL,
+  `description`                 text         DEFAULT NULL,
+  `created_at`                  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`                  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_active`                   tinyint(1)   DEFAULT 1,
+  `service_type`                enum('streaming','productivity','design','storage','music','gaming','education','other') NOT NULL,
+  `subscription_type`           enum('weekly','monthly','annual') NOT NULL,
+  `renewal_date`                date         DEFAULT NULL,
+  `category_id`                 varchar(64)  DEFAULT NULL,
+  `brand`                       varchar(100) DEFAULT NULL,
+  `max_user_slots`              int          DEFAULT NULL,
+  `available_slots`             int          DEFAULT NULL,
+  `current_users`               int          DEFAULT NULL,
+  `cost_per_additional_user`    decimal(12,2) DEFAULT NULL,
+  `is_shared_account`           tinyint(1)   DEFAULT 0,
+  `family_features`             text         DEFAULT NULL,
+  `usage_restrictions`          text         DEFAULT NULL,
+  `primary_holder_name`         varchar(255) DEFAULT NULL,
+  `primary_holder_email`        varchar(255) DEFAULT NULL,
+  `primary_holder_phone`        varchar(50)  DEFAULT NULL,
+  PRIMARY KEY (`email`),
+  KEY `idx_accounts_category_id` (`category_id`),
+  KEY `idx_accounts_product_name` (`product_name`),
+  KEY `idx_accounts_service_type` (`service_type`),
+  KEY `idx_accounts_subscription_type` (`subscription_type`)
+  -- If you want an FK and your data matches types, uncomment:
+  -- ,CONSTRAINT `fk_accounts_category`
+  --   FOREIGN KEY (`category_id`) REFERENCES `product_categories`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Accounts Table
-CREATE TABLE accounts (
-  id VARCHAR(64) PRIMARY KEY,
-  product_name VARCHAR(255) NOT NULL,
-  label VARCHAR(255),
-  email VARCHAR(255),
-  renewal_status ENUM('renewable','non-renewable','expired') DEFAULT 'renewable',
-  days_until_renewal INT,
-  cost DECIMAL(12,2) NOT NULL,
-  description TEXT,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
-  is_active BOOLEAN DEFAULT TRUE,
-  service_type ENUM('streaming','productivity','design','storage','music','gaming','education','other') NOT NULL,
-  subscription_type ENUM('weekly','monthly','annual') NOT NULL,
-  renewal_date DATE,
-  category_id VARCHAR(64),
-  brand VARCHAR(100),
-  max_user_slots INT,
-  available_slots INT,
-  current_users INT,
-  cost_per_additional_user DECIMAL(12,2),
-  is_shared_account BOOLEAN DEFAULT FALSE,
-  family_features TEXT, -- JSON array
-  usage_restrictions TEXT, -- JSON array
-  primary_holder_name VARCHAR(255),
-  primary_holder_email VARCHAR(255),
-  primary_holder_phone VARCHAR(50),
-  FOREIGN KEY (category_id) REFERENCES product_categories(id)
-);
+-- =========================================
+-- invoices
+-- =========================================
+CREATE TABLE `invoices` (
+  `invoice_number`  varchar(50)  NOT NULL,
+  `status`          varchar(20)  NOT NULL,
+  `customer_name`   varchar(100) NOT NULL,
+  `customer_email`  varchar(100) DEFAULT NULL,
+  `customer_type`   enum('Standard','Reseller') NOT NULL,
+  `reseller_id`     varchar(50)  DEFAULT NULL,
+  `issue_date`      date         NOT NULL,
+  `due_date`        date         NOT NULL,
+  `number_of_items` int          NOT NULL,
+  `payment_method`  varchar(50)  DEFAULT NULL,
+  `subtotal`        decimal(10,2) NOT NULL,
+  `discount_amount` decimal(10,2) DEFAULT 0.00,
+  `tax_amount`      decimal(10,2) NOT NULL,
+  `total_amount`    decimal(10,2) NOT NULL,
+  `payment_terms`   varchar(100) DEFAULT NULL,
+  `notes`           text         DEFAULT NULL,
+  `created_at`      timestamp    NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      timestamp    NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`invoice_number`),
+  KEY `idx_invoices_customer_email` (`customer_email`),
+  KEY `idx_invoices_issue_date` (`issue_date`),
+  KEY `idx_invoices_due_date` (`due_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Sales Table (Updated with order_number)
-CREATE TABLE sales (
-  id VARCHAR(64) PRIMARY KEY,
-  order_number VARCHAR(32) NOT NULL UNIQUE,
-  customer_id VARCHAR(64),
-  customer_name VARCHAR(255) NOT NULL,
-  customer_email VARCHAR(255) NOT NULL,
-  customer_phone VARCHAR(50),
-  items TEXT NOT NULL, -- JSON array of {productId, productName, price, quantity}
-  total_amount DECIMAL(12,2) NOT NULL,
-  payment_method ENUM('cash','card','bank_transfer') NOT NULL DEFAULT 'cash',
-  order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  status ENUM('completed','pending','cancelled') DEFAULT 'completed',
-  notes TEXT,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
-);
+-- =========================================
+-- sales
+-- =========================================
+CREATE TABLE `sales` (
+  `id`               int           NOT NULL AUTO_INCREMENT,
+  `order_number`     varchar(100)  NOT NULL,
+  `customer_name`    varchar(255)  NOT NULL,
+  `customer_email`   varchar(255)  DEFAULT NULL,
+  `items`            json          NOT NULL,
+  `total_amount`     decimal(10,2) NOT NULL,
+  `payment_method`   enum('cash','card','online','bank_transfer') DEFAULT NULL,
+  `status`           enum('pending','completed','cancelled') DEFAULT 'pending',
+  `order_date`       datetime      DEFAULT CURRENT_TIMESTAMP,
+  `customer_phone`   varchar(20)   DEFAULT NULL,
+  `notes`            text          DEFAULT NULL,
+  `customer_type`    enum('reseller','standard') DEFAULT 'standard',
+  `discount_rate`    decimal(5,2)  DEFAULT 0.00,
+  `discount_amount`  decimal(10,2) DEFAULT 0.00,
+  `end_date`         datetime      DEFAULT NULL,
+  `customer_id`      int           DEFAULT NULL,
+  `days_until_renewal` int         DEFAULT NULL,
+  `product_name`     varchar(255)  DEFAULT NULL,
+  `quantity`         int           DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_sales_order_number` (`order_number`),
+  KEY `idx_sales_customer_email` (`customer_email`),
+  KEY `idx_sales_order_date` (`order_date`),
+  KEY `idx_sales_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- UserSlots Table (for shared accounts)
-CREATE TABLE user_slots (
-  id VARCHAR(64) PRIMARY KEY,
-  account_id VARCHAR(64) NOT NULL,
-  name VARCHAR(255),
-  email VARCHAR(255),
-  access_level ENUM('admin','standard') DEFAULT 'standard',
-  restrictions TEXT, -- JSON array
-  custom_settings TEXT, -- JSON object
-  is_active BOOLEAN DEFAULT TRUE,
-  joined_date DATETIME,
-  last_active DATETIME,
-  FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
-);
+-- =========================================
+-- account_orders
+-- =========================================
+CREATE TABLE `account_orders` (
+  `id`              varchar(64)   NOT NULL,
+  `sales_id`        varchar(64)   NOT NULL,
+  `account_id`      varchar(64)   NOT NULL,
+  `start_date`      date          NOT NULL,
+  `end_date`        date          NOT NULL,
+  `quantity`        int           NOT NULL DEFAULT 1,
+  `unit_price`      decimal(12,2) NOT NULL,
+  `subtotal`        decimal(12,2) NOT NULL,
+  `status`          enum('active','expired','cancelled') DEFAULT 'active',
+  `activation_date` datetime      DEFAULT NULL,
+  `created_at`      datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_account_orders_sales_id` (`sales_id`),
+  KEY `idx_account_orders_account_id` (`account_id`)
+  -- If you later align types, you can add FKs like:
+  -- ,CONSTRAINT `fk_account_orders_sales`
+  --   FOREIGN KEY (`sales_id`) REFERENCES `sales`(`id`)
+  -- ,CONSTRAINT `fk_account_orders_account`
+  --   FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Invoices Table
-CREATE TABLE invoices (
-  id VARCHAR(64) PRIMARY KEY,
-  invoice_number VARCHAR(64) NOT NULL UNIQUE,
-  sale_id VARCHAR(64),
-  customer_id VARCHAR(64),
-  customer_info TEXT, -- JSON object
-  items TEXT, -- JSON array (invoice items)
-  subtotal DECIMAL(12,2),
-  discount_amount DECIMAL(12,2),
-  discount_percentage DECIMAL(5,2),
-  tax_amount DECIMAL(12,2),
-  tax_rate DECIMAL(5,2),
-  total_amount DECIMAL(12,2),
-  payment_method ENUM('cash','card','bank_transfer','credit','check'),
-  payment_terms VARCHAR(255),
-  due_date DATE,
-  issue_date DATE,
-  status ENUM('draft','sent','paid','overdue','cancelled') DEFAULT 'draft',
-  notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL,
-  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
-);
-
--- Transactions Table
-CREATE TABLE transactions (
-  id VARCHAR(64) PRIMARY KEY,
-  subscription_id VARCHAR(64),
-  customer_name VARCHAR(255),
-  product_name VARCHAR(255),
-  date DATETIME,
-  amount DECIMAL(12,2),
-  type ENUM('sale','renewal','refund'),
-  status ENUM('completed','pending','failed') DEFAULT 'completed'
-);
-
--- Subscriptions Table
-CREATE TABLE subscriptions (
-  id VARCHAR(64) PRIMARY KEY,
-  customer_id VARCHAR(64),
-  customer_name VARCHAR(255),
-  product_name VARCHAR(255),
-  duration INT,
-  start_date DATE,
-  end_date DATE,
-  status ENUM('active','expired','cancelled') DEFAULT 'active',
-  price DECIMAL(12,2),
-  created_at DATETIME
-);
-
--- Sample Data
-
--- Insert Product Categories
-INSERT INTO product_categories (id, name, description, icon, color, service_types, created_at) VALUES
-('cat-1', 'Adobe Creative Suite', 'Professional design and creative software', '🎨', 'bg-red-500/20 text-red-300 border-red-500/30', '["design", "productivity"]', NOW()),
-('cat-2', 'Streaming Services', 'Video and music streaming platforms', '🎬', 'bg-blue-500/20 text-blue-300 border-blue-500/30', '["streaming", "music"]', NOW()),
-('cat-3', 'Microsoft Office', 'Productivity and office software', '💼', 'bg-green-500/20 text-green-300 border-green-500/30', '["productivity"]', NOW()),
-('cat-4', 'Gaming Platforms', 'Gaming subscriptions and services', '🎮', 'bg-purple-500/20 text-purple-300 border-purple-500/30', '["gaming"]', NOW()),
-('cat-5', 'Cloud Storage', 'File storage and backup services', '☁️', 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', '["storage"]', NOW());
-
--- Insert Sample Customers
-INSERT INTO customers (id, name, email, phone, total_spent, total_orders, created_at, last_order_date, customer_type, billing_address_street, billing_address_city, billing_address_state, billing_address_zip_code, billing_address_country) VALUES
-('cust-1', 'John Smith', 'john.smith@example.com', '+94771234567', 2500.00, 3, '2024-01-15 10:30:00', '2024-12-01 14:20:00', 'standard', '123 Main Street', 'Colombo', 'Western Province', '00100', 'Sri Lanka'),
-('cust-2', 'Sarah Johnson', 'sarah.j@company.com', '+94772345678', 8500.00, 5, '2024-02-20 09:15:00', '2024-11-28 16:45:00', 'reseller', '456 Business Ave', 'Kandy', 'Central Province', '20000', 'Sri Lanka'),
-('cust-3', 'Mike Wilson', 'mike.wilson@gmail.com', '+94773456789', 1200.00, 2, '2024-03-10 11:45:00', '2024-11-25 10:30:00', 'standard', '789 Tech Road', 'Galle', 'Southern Province', '80000', 'Sri Lanka'),
-('cust-4', 'Digital Solutions Ltd', 'contact@digitalsolutions.lk', '+94774567890', 15000.00, 8, '2024-01-05 08:30:00', '2024-12-02 13:15:00', 'reseller', '321 Corporate Plaza', 'Negombo', 'Western Province', '11500', 'Sri Lanka');
-
--- Insert Sample Accounts/Products
-INSERT INTO accounts (id, product_name, label, email, cost, description, created_at, updated_at, service_type, subscription_type, renewal_date, category_id, is_shared_account, family_features, primary_holder_name, primary_holder_email) VALUES
-('acc-1', 'Adobe Creative Cloud', 'Professional Design Suite', 'design@company.com', 2500.00, 'Complete Adobe Creative Suite with Photoshop, Illustrator, Premiere Pro', NOW(), NOW(), 'design', 'annual', '2025-12-01', 'cat-1', TRUE, '["Multiple users", "Cloud sync", "Premium fonts"]', 'Design Team Lead', 'design@company.com'),
-('acc-2', 'Netflix Premium', 'Family Entertainment', 'family@example.com', 1500.00, '4K streaming, multiple devices, family sharing', NOW(), NOW(), 'streaming', 'monthly', '2025-01-15', 'cat-2', TRUE, '["4K streaming", "4 simultaneous streams", "Offline downloads"]', 'John Smith', 'john.smith@example.com'),
-('acc-3', 'Microsoft Office 365', 'Business Productivity', 'office@company.com', 3000.00, 'Complete Office suite with Teams, OneDrive, Exchange', NOW(), NOW(), 'productivity', 'annual', '2025-06-30', 'cat-3', TRUE, '["5 users", "1TB OneDrive each", "Teams Premium"]', 'Admin User', 'admin@company.com'),
-('acc-4', 'Spotify Family', 'Music Streaming', 'music@family.com', 800.00, 'Premium music streaming for family', NOW(), NOW(), 'music', 'monthly', '2025-02-01', 'cat-2', TRUE, '["6 accounts", "Offline mode", "No ads"]', 'Sarah Johnson', 'sarah.j@company.com'),
-('acc-5', 'Google Drive Business', 'Cloud Storage', 'storage@company.com', 1200.00, 'Unlimited cloud storage for business', NOW(), NOW(), 'storage', 'monthly', '2025-03-15', 'cat-5', FALSE, '[]', 'IT Department', 'it@company.com'),
-('acc-6', 'Steam Premium', 'Gaming Platform', 'gamer@example.com', 500.00, 'Premium gaming subscription', NOW(), NOW(), 'gaming', 'monthly', '2025-01-30', 'cat-4', FALSE, '[]', 'Mike Wilson', 'mike.wilson@gmail.com');
-
--- Insert Sample Sales/Orders
-INSERT INTO sales (id, order_number, customer_id, customer_name, customer_email, customer_phone, items, total_amount, payment_method, order_date, status, notes) VALUES
-('sale-1', 'ORD-2024-0001', 'cust-1', 'John Smith', 'john.smith@example.com', '+94771234567', '[{"productId":"acc-2","productName":"Netflix Premium","price":1500.00,"quantity":1}]', 1500.00, 'card', '2024-12-01 14:20:00', 'completed', 'Customer requested family plan'),
-('sale-2', 'ORD-2024-0002', 'cust-2', 'Sarah Johnson', 'sarah.j@company.com', '+94772345678', '[{"productId":"acc-1","productName":"Adobe Creative Cloud","price":2500.00,"quantity":2}, {"productId":"acc-3","productName":"Microsoft Office 365","price":3000.00,"quantity":1}]', 8000.00, 'bank_transfer', '2024-11-28 16:45:00', 'completed', 'Bulk order for company'),
-('sale-3', 'ORD-2024-0003', 'cust-3', 'Mike Wilson', 'mike.wilson@gmail.com', '+94773456789', '[{"productId":"acc-6","productName":"Steam Premium","price":500.00,"quantity":1}, {"productId":"acc-5","productName":"Google Drive Business","price":1200.00,"quantity":1}]', 1700.00, 'cash', '2024-11-25 10:30:00', 'completed', NULL),
-('sale-4', 'ORD-2024-0004', 'cust-4', 'Digital Solutions Ltd', 'contact@digitalsolutions.lk', '+94774567890', '[{"productId":"acc-1","productName":"Adobe Creative Cloud","price":2500.00,"quantity":5}, {"productId":"acc-3","productName":"Microsoft Office 365","price":3000.00,"quantity":3}]', 21500.00, 'bank_transfer', '2024-12-02 13:15:00', 'completed', 'Enterprise license agreement'),
-('sale-5', 'ORD-2024-0005', 'cust-1', 'John Smith', 'john.smith@example.com', '+94771234567', '[{"productId":"acc-4","productName":"Spotify Family","price":800.00,"quantity":1}]', 800.00, 'card', '2024-11-30 09:45:00', 'pending', 'Payment processing'),
-('sale-6', 'ORD-2024-0006', 'cust-2', 'Sarah Johnson', 'sarah.j@company.com', '+94772345678', '[{"productId":"acc-5","productName":"Google Drive Business","price":1200.00,"quantity":3}]', 3600.00, 'bank_transfer', '2024-11-20 11:30:00', 'completed', 'Additional storage for team');
-
--- Insert Sample Invoices
-INSERT INTO invoices (id, invoice_number, sale_id, customer_id, customer_info, items, subtotal, discount_amount, tax_amount, tax_rate, total_amount, payment_method, payment_terms, due_date, issue_date, status) VALUES
-('inv-1', 'INV-2024-001', 'sale-1', 'cust-1', '{"name":"John Smith","email":"john.smith@example.com","phone":"+94771234567","customerType":"standard"}', '[{"productName":"Netflix Premium","quantity":1,"unitPrice":1500.00,"lineTotal":1500.00}]', 1500.00, 0.00, 225.00, 15.00, 1725.00, 'card', 'Payment due within 30 days', '2025-01-01', '2024-12-01', 'sent'),
-('inv-2', 'INV-2024-002', 'sale-2', 'cust-2', '{"name":"Sarah Johnson","email":"sarah.j@company.com","phone":"+94772345678","customerType":"reseller"}', '[{"productName":"Adobe Creative Cloud","quantity":2,"unitPrice":2000.00,"lineTotal":4000.00},{"productName":"Microsoft Office 365","quantity":1,"unitPrice":2400.00,"lineTotal":2400.00}]', 8000.00, 1600.00, 960.00, 15.00, 7360.00, 'bank_transfer', 'Net 45 days - Authorized Reseller Terms', '2025-01-15', '2024-11-28', 'paid');
-
--- Update customer totals based on sales
-UPDATE customers c SET 
-  total_spent = (SELECT COALESCE(SUM(total_amount), 0) FROM sales WHERE customer_id = c.id AND status = 'completed'),
-  total_orders = (SELECT COUNT(*) FROM sales WHERE customer_id = c.id);
-
--- Create indexes for better performance
-CREATE INDEX idx_sales_order_number ON sales(order_number);
-CREATE INDEX idx_sales_customer_id ON sales(customer_id);
-CREATE INDEX idx_sales_order_date ON sales(order_date);
-CREATE INDEX idx_sales_status ON sales(status);
-CREATE INDEX idx_customers_email ON customers(email);
-CREATE INDEX idx_accounts_category_id ON accounts(category_id);
-CREATE INDEX idx_invoices_sale_id ON invoices(sale_id);
-
--- Note: If experiencing ERR_INSUFFICIENT_RESOURCES with lucide-react icons:
--- 1. Check for excessive icon imports
--- 2. Use selective imports instead of importing entire icon library
--- 3. Consider icon bundling optimization
--- 4. Restart development server with increased memory
-
--- Additional database optimizations for better performance
-ALTER TABLE sales ADD INDEX idx_sales_search (customer_name, customer_email, order_number);
-ALTER TABLE customers ADD INDEX idx_customers_search (name, email);
-ALTER TABLE accounts ADD INDEX idx_accounts_search (product_name, label);
-
--- Database connection pool settings (add to your db config)
--- SET GLOBAL max_connections = 200;
--- SET GLOBAL wait_timeout = 600;
--- SET GLOBAL interactive_timeout = 600;
-
-SHOW TABLES;
-SELECT COUNT(*) as total_categories FROM product_categories;
-SELECT COUNT(*) as total_customers FROM customers;
-SELECT COUNT(*) as total_accounts FROM accounts;
-SELECT COUNT(*) as total_sales FROM sales;
-SELECT COUNT(*) as total_invoices FROM invoices;
-
--- Sample queries to test the data
-SELECT 
-  s.order_number,
-  s.customer_name,
-  s.total_amount,
-  s.status,
-  s.order_date
-FROM sales s 
-ORDER BY s.order_date DESC;
-
-SELECT 
-  c.name,
-  c.email,
-  c.total_spent,
-  c.total_orders,
-  c.customer_type
-FROM customers c 
-ORDER BY c.total_spent DESC;
-
+-- =========================================
+-- account_credentials
+-- =========================================
+CREATE TABLE `account_credentials` (
+  `id`               varchar(64)   NOT NULL,
+  `account_order_id` varchar(64)   NOT NULL,
+  `username`         varchar(255)  DEFAULT NULL,
+  `password`         varchar(255)  DEFAULT NULL,
+  `login_url`        varchar(512)  DEFAULT NULL,
+  `additional_info`  text          DEFAULT NULL,
+  `is_active`        tinyint(1)    DEFAULT 1,
+  `created_at`       datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       datetime      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_account_credentials_order_id` (`account_order_id`)
+  -- Add FK when ready (types aligned):
+  -- ,CONSTRAINT `fk_credentials_order`
+  --   FOREIGN KEY (`account_order_id`) REFERENCES `account_orders`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

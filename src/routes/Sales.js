@@ -1,24 +1,13 @@
 // Ultimate final fix for sales API
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2/promise');
-
-// Create a new connection pool specifically for this router
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'POS',
-  port: 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+// Use centralized DB pool
+const db = require('../db');
 
 // Test database connection on router initialization
 (async () => {
   try {
-    const connection = await pool.getConnection();
+    const connection = await db.getConnection();
     console.log('Sales router: Database connection verified');
     connection.release();
   } catch (err) {
@@ -39,7 +28,7 @@ router.put('/:order_number', async (req, res) => {
     console.log(`PUT /api/sales/${decodedOrderNumber} - Updating sale`);
     console.log('Update data:', updateData);
     
-    connection = await pool.getConnection();
+  connection = await db.getConnection();
     
     // Check if the sale exists first
     const [existingSale] = await connection.execute(
@@ -124,7 +113,7 @@ router.get('/', async (req, res) => {
   let connection;
   try {
     console.log('GET /api/sales - Fetching all sales');
-    connection = await pool.getConnection();
+    connection = await db.getConnection();
     
     const [sales] = await connection.execute('SELECT * FROM sales ORDER BY id DESC');
     
@@ -164,7 +153,7 @@ router.get('/:order_number', async (req, res) => {
   let connection;
   try {
     console.log(`GET /api/sales/${req.params.order_number} - Fetching sale by ID`);
-    connection = await pool.getConnection();
+    connection = await db.getConnection();
     
     const [sale] = await connection.execute('SELECT * FROM sales WHERE order_number = ?', [req.params.order_number]);
     
@@ -242,7 +231,7 @@ router.delete('/:order_number', async (req, res) => {
     const decodedOrderNumber = decodeURIComponent(encodedOrderNumber);
 
     console.log(`DELETE /api/sales/${decodedOrderNumber} - Deleting sale by order_number`);
-    connection = await pool.getConnection();
+    connection = await db.getConnection();
 
     // Begin transaction
     await connection.beginTransaction();
@@ -426,7 +415,7 @@ router.post('/', async (req, res) => {
     console.log('Received discountRate:', discountRate);
     
     // Get database connection
-    connection = await pool.getConnection();
+  connection = await db.getConnection();
     
     // Test connection
     const [connectionTest] = await connection.execute('SELECT 1 AS connected');
