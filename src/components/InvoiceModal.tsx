@@ -16,8 +16,6 @@ import {
   Receipt
 } from 'lucide-react';
 import { Invoice, InvoiceItem } from '../types/index';
-// @ts-expect-error - html2pdf.js has no official types
-import html2pdf from 'html2pdf.js';
 import { createRoot } from 'react-dom/client';
 import InvoiceBody from './InvoiceBody';
 import { getCompanyInfo } from '../data/companyInfo';
@@ -98,6 +96,13 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     let container: HTMLDivElement | null = null;
     let root: ReturnType<typeof createRoot> | null = null;
     try {
+      // Lazy-load html2pdf only when needed
+      type H2P = () => {
+        set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } };
+      };
+      const html2pdfMod = await import('html2pdf.js');
+      const h2p = ((html2pdfMod as unknown as { default?: H2P })?.default || (html2pdfMod as unknown as H2P));
+
       // Render the same body the modal shows so PDF matches exactly
       container = document.createElement('div');
       document.body.appendChild(container);
@@ -118,11 +123,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       const element = container.firstElementChild as HTMLElement | null;
       if (!element) throw new Error('Printable element not found');
 
-      type H2P = () => {
-        set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } };
-      };
       const fileName = `Invoice-${invoice.invoiceNumber}.pdf`;
-      const h2p = ((html2pdf as unknown as { default?: H2P })?.default || (html2pdf as unknown as H2P));
       await h2p()
         .set({
           margin: [10, 10, 10, 10],

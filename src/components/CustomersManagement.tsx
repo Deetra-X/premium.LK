@@ -16,7 +16,6 @@ import {
   Clock
 } from 'lucide-react';
 import { Customer, Sale } from '../types/index';
-import { getSalesData } from '../data/salesData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 import { CustomerProfileModal } from './CustomerProfileModal';
 import { CreateOrderModal } from './CreateOrderModal';

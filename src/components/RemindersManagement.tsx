@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { Account, Sale } from '../types';
 import { fetchExpiringAccounts } from '../api/Dashboard';
-import { getSalesData } from '../data/salesData';
 import { formatCurrency, formatDate } from '../utils/dateUtils';
 
 interface AccountRenewal {
@@ -470,6 +469,7 @@ export const RemindersManagement: React.FC = () => {
 
   const generateSalesRenewals = async () => {
     try {
+      const { getSalesData } = await import('../data/salesData');
       const { sales } = await getSalesData();
       console.log('📊 Sales data loaded for renewals:', sales.length, 'sales');
       const now = new Date();

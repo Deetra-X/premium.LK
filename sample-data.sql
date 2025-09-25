@@ -56,29 +56,29 @@ INSERT INTO accounts (
  '["Game Library", "Cloud Gaming", "Xbox Live Gold"]', 'John Smith', 'john.smith@email.com');
 
 -- Insert sample subscriptions
-INSERT INTO subscriptions (id, customer_id, customer_name, product_name, duration, start_date, end_date, status, price, created_at) VALUES
-('sub_1', 'customer_1', 'John Smith', 'Netflix Premium', 12, '2024-01-01', '2024-12-31', 'active', 15.99, NOW()),
-('sub_2', 'customer_2', 'Sarah Johnson', 'Microsoft 365 Family', 12, '2024-02-01', '2025-01-31', 'active', 99.99, NOW()),
-('sub_3', 'customer_3', 'Mike Wilson', 'Adobe Creative Cloud', 12, '2024-03-01', '2025-02-28', 'active', 52.99, NOW()),
-('sub_4', 'customer_4', 'Emily Davis', 'Spotify Family', 12, '2024-01-15', '2025-01-14', 'active', 15.99, NOW()),
-('sub_5', 'customer_5', 'Robert Brown', 'Google Drive Storage', 6, '2024-06-01', '2024-11-30', 'active', 9.99, NOW());
+INSERT INTO subscriptions (id, customer_id, account_id, customer_name, product_name, duration, start_date, end_date, status, price, created_at) VALUES
+('sub_1', 'customer_1', 'acc_1', 'John Smith', 'Netflix Premium', 12, '2024-01-01', '2024-12-31', 'active', 15.99, NOW()),
+('sub_2', 'customer_2', 'acc_2', 'Sarah Johnson', 'Microsoft 365 Family', 12, '2024-02-01', '2025-01-31', 'active', 99.99, NOW()),
+('sub_3', 'customer_3', 'acc_3', 'Mike Wilson', 'Adobe Creative Cloud', 12, '2024-03-01', '2025-02-28', 'active', 52.99, NOW()),
+('sub_4', 'customer_4', 'acc_4', 'Emily Davis', 'Spotify Family', 12, '2024-01-15', '2025-01-14', 'active', 15.99, NOW()),
+('sub_5', 'customer_5', 'acc_5', 'Robert Brown', 'Google Drive Storage', 6, '2024-06-01', '2024-11-30', 'active', 9.99, NOW());
 
 -- Insert sample transactions
-INSERT INTO transactions (id, subscription_id, customer_name, product_name, date, amount, type, status) VALUES
-('trans_1', 'sub_1', 'John Smith', 'Netflix Premium', NOW(), 15.99, 'sale', 'completed'),
-('trans_2', 'sub_2', 'Sarah Johnson', 'Microsoft 365 Family', NOW(), 99.99, 'sale', 'completed'),
-('trans_3', 'sub_3', 'Mike Wilson', 'Adobe Creative Cloud', NOW(), 52.99, 'sale', 'completed'),
-('trans_4', 'sub_4', 'Emily Davis', 'Spotify Family', NOW(), 15.99, 'renewal', 'completed'),
-('trans_5', 'sub_5', 'Robert Brown', 'Google Drive Storage', NOW(), 9.99, 'sale', 'completed');
+INSERT INTO transactions (id, subscription_id, customer_id, customer_name, product_name, date, created_at, amount, type, status) VALUES
+('trans_1', 'sub_1', 'customer_1', 'John Smith', 'Netflix Premium', NOW(), NOW(), 15.99, 'sale', 'completed'),
+('trans_2', 'sub_2', 'customer_2', 'Sarah Johnson', 'Microsoft 365 Family', NOW(), NOW(), 99.99, 'sale', 'completed'),
+('trans_3', 'sub_3', 'customer_3', 'Mike Wilson', 'Adobe Creative Cloud', NOW(), NOW(), 52.99, 'sale', 'completed'),
+('trans_4', 'sub_4', 'customer_4', 'Emily Davis', 'Spotify Family', NOW(), NOW(), 15.99, 'renewal', 'completed'),
+('trans_5', 'sub_5', 'customer_5', 'Robert Brown', 'Google Drive Storage', NOW(), NOW(), 9.99, 'sale', 'completed');
 
 -- Insert sample sales
-INSERT INTO sales (id, customer_id, customer_name, customer_email, customer_phone, items, total_amount, payment_method, order_date, status) VALUES
-('sale_1', 'customer_1', 'John Smith', 'john.smith@email.com', '+1234567890', 
+INSERT INTO sales (order_number, customer_id, customer_name, customer_email, customer_phone, items, total_amount, payment_method, order_date, status) VALUES
+('#10001', 'customer_1', 'John Smith', 'john.smith@email.com', '+1234567890', 
  '[{"productId": "netflix_premium", "productName": "Netflix Premium", "price": 15.99, "quantity": 1}]', 
  15.99, 'card', NOW(), 'completed'),
-('sale_2', 'customer_2', 'Sarah Johnson', 'sarah.johnson@email.com', '+1234567891', 
+('#10002', 'customer_2', 'Sarah Johnson', 'sarah.johnson@email.com', '+1234567891', 
  '[{"productId": "office365", "productName": "Microsoft 365 Family", "price": 99.99, "quantity": 1}]', 
  99.99, 'bank_transfer', NOW(), 'completed'),
-('sale_3', 'customer_3', 'Mike Wilson', 'mike.wilson@email.com', '+1234567892', 
+('#10003', 'customer_3', 'Mike Wilson', 'mike.wilson@email.com', '+1234567892', 
  '[{"productId": "adobe_cc", "productName": "Adobe Creative Cloud", "price": 52.99, "quantity": 1}]', 
  52.99, 'card', NOW(), 'completed');

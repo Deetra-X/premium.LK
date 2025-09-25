@@ -162,16 +162,15 @@ const setupTables = async () => {
     `);
     console.log('Invoices table is ready.');
 
-    // Create sample data using the sample-data.sql file if it exists
+    // Optionally create sample data using the sample-data.sql file when enabled
     const sampleDataPath = path.join(__dirname, 'sample-data.sql');
-    if (fs.existsSync(sampleDataPath)) {
-      console.log('Sample data file found. Loading sample data...');
-      
+    const shouldSeed = process.env.SEED_SAMPLE_DATA === 'true';
+    if (shouldSeed && fs.existsSync(sampleDataPath)) {
+      console.log('SEED_SAMPLE_DATA=true and sample-data.sql found. Loading sample data...');
       try {
         const sampleDataSql = fs.readFileSync(sampleDataPath, 'utf8');
         // Split by semicolon to execute each statement separately
         const statements = sampleDataSql.split(';');
-        
         for (let statement of statements) {
           statement = statement.trim();
           if (statement) {
@@ -182,6 +181,8 @@ const setupTables = async () => {
       } catch (sampleDataError) {
         console.error('Error loading sample data:', sampleDataError.message);
       }
+    } else {
+      console.log('Sample data seeding skipped (set SEED_SAMPLE_DATA=true to enable).');
     }
 
     await db.end();

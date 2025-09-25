@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Invoice, Customer, Sale } from '../types/index';
 import { createInvoiceFromSale } from '../data/invoiceData';
-import { getSalesData } from '../data/salesData';
 import { formatCurrency } from '../utils/dateUtils';
 import {
   X,
@@ -67,6 +66,7 @@ export const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     const loadData = async () => {
       try {
         setLoading(true);
+        const { getSalesData } = await import('../data/salesData');
         const data = await getSalesData();
         setSales(data.sales);
         setCustomers(data.customers);
