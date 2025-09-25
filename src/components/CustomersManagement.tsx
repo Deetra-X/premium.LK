@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
@@ -77,9 +77,12 @@ export const CustomersManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'totalSpent' | 'totalOrders' | 'lastOrder'>('totalSpent');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterBy, setFilterBy] = useState<'all' | 'high_value' | 'frequent' | 'recent'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 24;
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCreateOrder, setShowCreateOrder] = useState(false);
@@ -209,6 +212,12 @@ export const CustomersManagement: React.FC = () => {
     loadData();
   }, [parseApiItems]);
 
+  // Debounce search input to reduce frequent filtering
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim().toLowerCase()), 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
   // Function to automatically create or update customer profile
   const createOrUpdateCustomerProfile = async (saleData: CreateSaleData) => {
     const existingCustomer = customers.find(c => c.email === saleData.customerEmail);
@@ -304,41 +313,20 @@ export const CustomersManagement: React.FC = () => {
   //     );
   //   }
 
-  const getFilteredCustomers = () => {
+  const getFilteredCustomers = useCallback(() => {
   let filtered = customers;
-  
-  console.log('Search Debug:', {
-    searchTerm,
-    totalCustomers: customers.length,
-    sampleCustomer: customers[0],
-    searchTermLength: searchTerm.length
-  });
 
-  // Apply search filter
-  if (searchTerm) {
-    const searchLower = searchTerm.toLowerCase().trim();
-    console.log('Searching for:', searchLower);
+  // Apply search filter (debounced for performance)
+  if (debouncedSearch) {
+    const searchLower = debouncedSearch;
     
     filtered = filtered.filter(customer => {
       const nameMatch = customer.name?.toLowerCase().includes(searchLower);
       const emailMatch = customer.email?.toLowerCase().includes(searchLower);
-      const phoneMatch = customer.phone?.includes(searchTerm);
+      const phoneMatch = customer.phone?.includes(searchLower);
       
-      const matches = nameMatch || emailMatch || phoneMatch;
-      
-      if (matches) {
-        console.log('Match found:', {
-          customer: customer.name,
-          nameMatch,
-          emailMatch,
-          phoneMatch
-        });
-      }
-      
-      return matches;
+      return nameMatch || emailMatch || phoneMatch;
     });
-    
-    console.log('Filtered results:', filtered.length);
   }
 
 
@@ -405,7 +393,7 @@ export const CustomersManagement: React.FC = () => {
       
       return sortOrder === 'desc' ? -comparison : comparison;
     });
-  };
+  }, [customers, debouncedSearch, filterBy, sortBy, sortOrder]);
 
   const getCustomerSales = (customerId: string): Sale[] => {
     return sales.filter(sale => sale.customerEmail === customerId || sale.customerId === customerId);
@@ -447,7 +435,18 @@ export const CustomersManagement: React.FC = () => {
     setReorderItems([]);
   };
 
-  const filteredCustomers = getFilteredCustomers();
+  const filteredCustomers = useMemo(() => getFilteredCustomers(), [getFilteredCustomers]);
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, currentPage]);
+
+  // Reset to first page whenever filters/search/sort change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, sortBy, sortOrder, filterBy]);
 
   // Calculate summary metrics
   const totalCustomers = customers.length;
@@ -589,7 +588,7 @@ export const CustomersManagement: React.FC = () => {
 
       {/* Customer Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-        {filteredCustomers.map((customer) => {
+        {pagedCustomers.map((customer) => {
           const customerTier = getCustomerTier(customer);
           const daysSinceLastOrder = getDaysSinceLastOrder(customer.lastOrderDate ?? undefined);
           const TierIcon = customerTier.icon;
@@ -730,6 +729,31 @@ export const CustomersManagement: React.FC = () => {
           </div>
           <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No customers found</h3>
           <p className="text-gray-400 text-sm sm:text-base">Try adjusting your search or filter criteria</p>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {filteredCustomers.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mt-4">
+          <div className="text-xs sm:text-sm text-gray-400">
+            Page {currentPage} of {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-2 rounded-lg text-sm border border-slate-600 ${currentPage === 1 ? 'text-gray-500 cursor-not-allowed bg-slate-800' : 'text-white bg-slate-700 hover:bg-slate-600'}`}
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-2 rounded-lg text-sm border border-slate-600 ${currentPage === totalPages ? 'text-gray-500 cursor-not-allowed bg-slate-800' : 'text-white bg-slate-700 hover:bg-slate-600'}`}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 

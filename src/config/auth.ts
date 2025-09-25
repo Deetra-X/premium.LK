@@ -9,6 +9,11 @@ export const HARDCODED_CREDENTIALS = {
 export const SESSION_KEY = 'premiumlk_auth_session';
 export const LOCK_KEY = 'premiumlk_lock_state';
 
+// Toggle this to control whether login persists across reloads.
+// false = always require login on initial load (no auto-login)
+// true  = remember the session in localStorage
+const PERSIST_SESSION = false;
+
 export type AuthSession = {
   email: string;
 };
@@ -21,6 +26,7 @@ export function verifyCredentials(email: string, password: string): boolean {
 }
 
 export function getSavedSession(): AuthSession | null {
+  if (!PERSIST_SESSION) return null;
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -31,6 +37,7 @@ export function getSavedSession(): AuthSession | null {
 }
 
 export function saveSession(session: AuthSession) {
+  if (!PERSIST_SESSION) return; // do not persist; in-memory only
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 

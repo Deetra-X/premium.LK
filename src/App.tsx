@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { AccountsManagement } from './components/AccountsManagement';
-import { SalesManagement } from './components/SalesManagement';
-import { CustomersManagement } from './components/CustomersManagement';
-import { RemindersManagement } from './components/RemindersManagement';
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const AccountsManagement = lazy(() => import('./components/AccountsManagement').then(m => ({ default: m.AccountsManagement })));
+const SalesManagement = lazy(() => import('./components/SalesManagement').then(m => ({ default: m.SalesManagement })));
+const CustomersManagement = lazy(() => import('./components/CustomersManagement').then(m => ({ default: m.CustomersManagement })));
+const RemindersManagement = lazy(() => import('./components/RemindersManagement').then(m => ({ default: m.RemindersManagement })));
 import { NavigationItem } from './types/index';
 import { Login } from './components/Login';
 import { LockScreen } from './components/LockScreen';
@@ -93,7 +93,9 @@ function App() {
 
           {/* Main Content */}
           <main className="p-6">
-            <Outlet />
+            <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
